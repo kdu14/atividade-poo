@@ -48,17 +48,6 @@ src/main/java/
       Dinheiro.java               -- BigDecimal, truncamento (nao arredondamento!) e formatacao
       Datas.java                  -- parse/validacao de data no formato d/M/yyyy
       Formatador.java             -- monta o relatorio de rodaFolha byte a byte
-```
-
-## Decisões de design que valem a pena lembrar (ou defender numa arguição)
-
-- **Nada de `instanceof`.** Onde uma operação só faz sentido para um tipo de
-  empregado (bater cartão só para horista, ter comissão só para
-  comissionado...), a classe `Empregado` tem uma implementação "padrão" que
-  lança erro, e só a subclasse aplicável sobrescreve. Quem chama nunca
-  pergunta "que tipo é este?" — só chama o método e deixa o polimorfismo
-  decidir. O mesmo vale para `MetodoPagamento` (`recebeEmBanco()` no lugar de
-  checar se é uma instância de `EmBanco`).
 
 - **`BigDecimal`, nunca `double`, para dinheiro.** E o arredondamento é
   **truncamento** (`RoundingMode.DOWN`), não o arredondamento comum — isso foi
