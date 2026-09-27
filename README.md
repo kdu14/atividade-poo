@@ -91,10 +91,3 @@ src/main/java/
   ele devolve o mesmo resultado em vez de recalcular sobre um período vazio
   (o que aconteceria, porque a "data-base" já teria avançado na primeira
   chamada).
-
-## Pendências / próximos passos
-
-- Milestones 2 e 3 (agenda de pagamento customizada — User Stories 9 e 10 — e
-  o que mais o professor definir) ainda não foram implementados.
-- `docs/desenvolvimento.md` e afins não existem ainda; se o professor exigir
-  documentação de arquitetura separada, é o próximo passo natural.
