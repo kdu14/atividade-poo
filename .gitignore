@@ -1,0 +1,14 @@
+# build
+target/
+*.class
+
+# saida gerada pelos testes (rodaFolha escreve estes arquivos na raiz) --
+# o "/" na frente restringe a raiz, senao a regra tambem apagaria da lista
+# os gabaritos de mesmo nome que ficam dentro de ok/
+/wepayu.dat
+/folha-*.txt
+
+# IDE
+.idea/
+*.iml
+.vscode/

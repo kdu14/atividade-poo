@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>br.ufal.ic.p2</groupId>
+    <artifactId>wepayu</artifactId>
+    <version>1.0-milestone1</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- easyaccept.jar eh a ferramenta de testes de aceitacao fornecida pela disciplina.
+             Nao existe no Maven Central, entao ele entra como dependencia "system",
+             apontando direto pro jar que fica em lib/. -->
+        <dependency>
+            <groupId>easyaccept</groupId>
+            <artifactId>easyaccept</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/easyaccept.jar</systemPath>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>wepayu</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <!-- Roda "mvn compile exec:java" pra executar o Main (que dispara o
+                 EasyAccept contra tests/us*.txt). O maven-shade-plugin foi
+                 descartado aqui: ele nao empacota dependencia de escopo
+                 "system" (o caso do easyaccept.jar) dentro do jar final,
+                 que e uma limitacao conhecida do plugin, nao bug nosso. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <mainClass>Main</mainClass>
+                    <classpathScope>compile</classpathScope>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
