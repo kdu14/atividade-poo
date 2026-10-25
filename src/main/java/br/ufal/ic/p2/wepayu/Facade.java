@@ -3,6 +3,7 @@ package br.ufal.ic.p2.wepayu;
 import br.ufal.ic.p2.wepayu.excecoes.WePayUException;
 import br.ufal.ic.p2.wepayu.persistencia.ArquivoDeDados;
 import br.ufal.ic.p2.wepayu.servicos.ServicoDaFolha;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDeAgendas;
 import br.ufal.ic.p2.wepayu.servicos.ServicoDeAlteracao;
 import br.ufal.ic.p2.wepayu.servicos.ServicoDeEmpregados;
 import br.ufal.ic.p2.wepayu.servicos.ServicoDeLancamentos;
@@ -25,6 +26,7 @@ public class Facade {
     private final ServicoDoSindicato sindicato;
     private final ServicoDeLancamentos lancamentos;
     private final ServicoDaFolha folha;
+    private final ServicoDeAgendas agendas;
 
     public Facade() throws WePayUException {
         Sessao sessao = new Sessao(new ArquivoDeDados(ARQUIVO_DE_DADOS));
@@ -34,6 +36,7 @@ public class Facade {
         alteracao = new ServicoDeAlteracao(sessao, sindicato);
         lancamentos = new ServicoDeLancamentos(sessao);
         folha = new ServicoDaFolha(sessao);
+        agendas = new ServicoDeAgendas(sessao);
     }
 
     // ---- sistema ----
@@ -140,5 +143,11 @@ public class Facade {
 
     public void rodaFolha(String data, String saida) throws WePayUException {
         folha.rodaFolha(data, saida);
+    }
+
+    // ---- agendas de pagamento ----
+
+    public void criarAgendaDePagamentos(String descricao) throws WePayUException {
+        agendas.criarAgendaDePagamentos(descricao);
     }
 }

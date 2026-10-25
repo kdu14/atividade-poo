@@ -1,6 +1,7 @@
 package br.ufal.ic.p2.wepayu.persistencia;
 
 import br.ufal.ic.p2.wepayu.excecoes.AgendaIndisponivelException;
+import br.ufal.ic.p2.wepayu.excecoes.AgendaJaExisteException;
 import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoExisteException;
 import br.ufal.ic.p2.wepayu.fabricas.FabricaDeAgendas;
 import br.ufal.ic.p2.wepayu.modelos.Empregado;
@@ -78,6 +79,13 @@ public class Repositorio implements Serializable {
             throw new AgendaIndisponivelException();
         }
         return agenda;
+    }
+
+    public void adicionarAgenda(AgendaPagamento agenda) throws AgendaJaExisteException {
+        if (agendasDisponiveis.containsKey(agenda.getDescricao())) {
+            throw new AgendaJaExisteException();
+        }
+        agendasDisponiveis.put(agenda.getDescricao(), agenda);
     }
 
     public void zerar() {
