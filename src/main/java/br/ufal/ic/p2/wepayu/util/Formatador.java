@@ -1,11 +1,13 @@
 package br.ufal.ic.p2.wepayu.util;
 
 import br.ufal.ic.p2.wepayu.modelos.Pagamento;
+import br.ufal.ic.p2.wepayu.modelos.TipoEmpregado;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
@@ -23,13 +25,12 @@ public class Formatador {
     private Formatador() {
     }
 
-    public static String montarRelatorio(LocalDate data, List<Pagamento> horistas,
-                                          List<Pagamento> assalariados, List<Pagamento> comissionados) {
+    public static String montarRelatorio(LocalDate data, Collection<Pagamento> pagamentos) {
         // o relatorio lista cada secao em ordem alfabetica de nome, nao na
         // ordem em que os empregados foram criados (conferido contra ok/*.txt).
-        horistas = ordenadoPorNome(horistas);
-        assalariados = ordenadoPorNome(assalariados);
-        comissionados = ordenadoPorNome(comissionados);
+        List<Pagamento> horistas = doTipoPorNome(pagamentos, TipoEmpregado.HORISTA);
+        List<Pagamento> assalariados = doTipoPorNome(pagamentos, TipoEmpregado.ASSALARIADO);
+        List<Pagamento> comissionados = doTipoPorNome(pagamentos, TipoEmpregado.COMISSIONADO);
 
         StringBuilder sb = new StringBuilder();
 
@@ -48,10 +49,15 @@ public class Formatador {
         return sb.toString();
     }
 
-    private static List<Pagamento> ordenadoPorNome(List<Pagamento> linhas) {
-        List<Pagamento> copia = new ArrayList<>(linhas);
-        copia.sort(Comparator.comparing(Pagamento::nome));
-        return copia;
+    private static List<Pagamento> doTipoPorNome(Collection<Pagamento> pagamentos, TipoEmpregado tipo) {
+        List<Pagamento> doTipo = new ArrayList<>();
+        for (Pagamento p : pagamentos) {
+            if (p.tipo() == tipo) {
+                doTipo.add(p);
+            }
+        }
+        doTipo.sort(Comparator.comparing(Pagamento::nome));
+        return doTipo;
     }
 
     private static BigDecimal somarBruto(List<Pagamento> linhas) {
@@ -81,14 +87,14 @@ public class Formatador {
 
         for (Pagamento p : linhas) {
             sb.append(padDireita(p.nome(), 36)).append(' ')
-                    .append(padEsquerda(formatarHoras(p.horasNormais()), 5)).append(' ')
-                    .append(padEsquerda(formatarHoras(p.horasExtras()), 5)).append(' ')
+                    .append(padEsquerda(Horas.formatar(p.composicao().horasNormais()), 5)).append(' ')
+                    .append(padEsquerda(Horas.formatar(p.composicao().horasExtras()), 5)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioBruto()), 13)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.descontos()), 9)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioLiquido()), 15)).append(' ')
                     .append(p.metodoDescricao()).append('\n');
-            totalHoras = totalHoras.add(p.horasNormais());
-            totalExtra = totalExtra.add(p.horasExtras());
+            totalHoras = totalHoras.add(p.composicao().horasNormais());
+            totalExtra = totalExtra.add(p.composicao().horasExtras());
             totalBruto = totalBruto.add(p.salarioBruto());
             totalDescontos = totalDescontos.add(p.descontos());
             totalLiquido = totalLiquido.add(p.salarioLiquido());
@@ -96,8 +102,8 @@ public class Formatador {
 
         sb.append('\n');
         sb.append(padDireita("TOTAL HORISTAS", 36)).append(' ')
-                .append(padEsquerda(formatarHoras(totalHoras), 5)).append(' ')
-                .append(padEsquerda(formatarHoras(totalExtra), 5)).append(' ')
+                .append(padEsquerda(Horas.formatar(totalHoras), 5)).append(' ')
+                .append(padEsquerda(Horas.formatar(totalExtra), 5)).append(' ')
                 .append(padEsquerda(Dinheiro.formatar(totalBruto), 13)).append(' ')
                 .append(padEsquerda(Dinheiro.formatar(totalDescontos), 9)).append(' ')
                 .append(padEsquerda(Dinheiro.formatar(totalLiquido), 15)).append('\n');
@@ -159,16 +165,16 @@ public class Formatador {
 
         for (Pagamento p : linhas) {
             sb.append(padDireita(p.nome(), 21)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.salarioFixo()), 8)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.vendas()), 8)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.comissao()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.composicao().salarioFixo()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.composicao().vendas()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.composicao().comissao()), 8)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioBruto()), 13)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.descontos()), 9)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioLiquido()), 15)).append(' ')
                     .append(p.metodoDescricao()).append('\n');
-            totalFixo = totalFixo.add(p.salarioFixo());
-            totalVendas = totalVendas.add(p.vendas());
-            totalComissao = totalComissao.add(p.comissao());
+            totalFixo = totalFixo.add(p.composicao().salarioFixo());
+            totalVendas = totalVendas.add(p.composicao().vendas());
+            totalComissao = totalComissao.add(p.composicao().comissao());
             totalBruto = totalBruto.add(p.salarioBruto());
             totalDescontos = totalDescontos.add(p.descontos());
             totalLiquido = totalLiquido.add(p.salarioLiquido());
@@ -219,13 +225,5 @@ public class Formatador {
 
     private static String padEsquerda(String texto, int largura) {
         return String.format("%" + largura + "s", texto);
-    }
-
-    /** Horas nao usam 2 casas fixas como dinheiro: 8, nao 8,00; 1,5, nao 1,50. */
-    public static String formatarHoras(BigDecimal valor) {
-        if (valor.compareTo(BigDecimal.ZERO) == 0) {
-            return "0";
-        }
-        return valor.stripTrailingZeros().toPlainString().replace('.', ',');
     }
 }

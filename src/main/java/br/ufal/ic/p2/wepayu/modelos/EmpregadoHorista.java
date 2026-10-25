@@ -1,61 +1,68 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhHoristaException;
 import br.ufal.ic.p2.wepayu.util.Datas;
 import br.ufal.ic.p2.wepayu.util.Dinheiro;
+import br.ufal.ic.p2.wepayu.util.Periodo;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Recebe por hora trabalhada; o que passa de 8 horas no dia vale 1,5 hora. */
 public class EmpregadoHorista extends Empregado {
 
     private static final long serialVersionUID = 1L;
 
-    private static final BigDecimal OITO_HORAS = BigDecimal.valueOf(8);
-    private static final BigDecimal FATOR_HORA_EXTRA = new BigDecimal("1.5");
+    private static final BigDecimal JORNADA_DIARIA = BigDecimal.valueOf(8);
+    private static final BigDecimal ADICIONAL_HORA_EXTRA = new BigDecimal("1.5");
 
     private final List<CartaoPonto> cartoes = new ArrayList<>();
 
+    /**
+     * A dataBase fica null ate o primeiro cartao: o enunciado diz que o
+     * horista e contratado no primeiro dia em que lancar um cartao.
+     */
     public EmpregadoHorista(String id, String nome, String endereco, BigDecimal salarioPorHora) {
-        super(id, nome, endereco, salarioPorHora);
-        // dataBase fica null ate o primeiro cartao: o enunciado diz que o
-        // horista "e contratado no primeiro dia em que lancar um cartao".
+        super(id, nome, endereco, salarioPorHora, null);
+    }
+
+    /** O proprio empregado, se for horista; senao, o erro de negocio. */
+    public static EmpregadoHorista exigir(Empregado empregado) throws EmpregadoNaoEhHoristaException {
+        if (empregado instanceof EmpregadoHorista horista) {
+            return horista;
+        }
+        throw new EmpregadoNaoEhHoristaException();
     }
 
     @Override
-    public String getTipo() {
-        return "horista";
+    public TipoEmpregado getTipo() {
+        return TipoEmpregado.HORISTA;
     }
 
-    @Override
-    public void lancarCartao(LocalDate data, BigDecimal horas) {
-        cartoes.add(new CartaoPonto(data, horas));
+    public void lancarCartao(CartaoPonto cartao) {
+        cartoes.add(cartao);
         if (getDataBase() == null) {
-            setDataBase(data.minusDays(1));
+            setDataBase(cartao.data().minusDays(1));
         }
     }
 
-    @Override
-    public BigDecimal getHorasNormaisNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
+    public BigDecimal getHorasNormaisNoPeriodo(Periodo periodo) {
         BigDecimal total = BigDecimal.ZERO;
-        for (CartaoPonto c : cartoes) {
-            if (Datas.dentroDoIntervalo(c.getData(), inicioInclusivo, fimExclusivo)) {
-                total = total.add(c.getHoras().min(OITO_HORAS));
+        for (CartaoPonto cartao : cartoes) {
+            if (periodo.contem(cartao.data())) {
+                total = total.add(cartao.horas().min(JORNADA_DIARIA));
             }
         }
         return total;
     }
 
-    @Override
-    public BigDecimal getHorasExtrasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
+    public BigDecimal getHorasExtrasNoPeriodo(Periodo periodo) {
         BigDecimal total = BigDecimal.ZERO;
-        for (CartaoPonto c : cartoes) {
-            if (Datas.dentroDoIntervalo(c.getData(), inicioInclusivo, fimExclusivo)) {
-                BigDecimal extra = c.getHoras().subtract(OITO_HORAS);
-                if (extra.compareTo(BigDecimal.ZERO) > 0) {
-                    total = total.add(extra);
-                }
+        for (CartaoPonto cartao : cartoes) {
+            if (periodo.contem(cartao.data())) {
+                total = total.add(cartao.horas().subtract(JORNADA_DIARIA).max(BigDecimal.ZERO));
             }
         }
         return total;
@@ -71,25 +78,17 @@ public class EmpregadoHorista extends Empregado {
     protected Pagamento calcularPagamentoNovo(LocalDate data) {
         if (getDataBase() == null) {
             // nunca lancou cartao: aparece na folha, mas nao ha nada a calcular ainda.
-            return new Pagamento(getNome(), getTipo(), BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    getMetodoPagamento().getDescricao(getEndereco()), false);
+            return novoPagamento(ComposicaoDoBruto.deHorista(BigDecimal.ZERO, BigDecimal.ZERO), BigDecimal.ZERO, data);
         }
 
-        LocalDate inicioPeriodo = getDataBase().plusDays(1);
-        BigDecimal horasNormais = getHorasNormaisNoPeriodo(inicioPeriodo, data);
-        BigDecimal horasExtras = getHorasExtrasNoPeriodo(inicioPeriodo, data);
+        Periodo periodo = new Periodo(getDataBase().plusDays(1), data);
+        BigDecimal horasNormais = getHorasNormaisNoPeriodo(periodo);
+        BigDecimal horasExtras = getHorasExtrasNoPeriodo(periodo);
 
         BigDecimal bruto = Dinheiro.truncar(
                 horasNormais.multiply(getSalario())
-                        .add(horasExtras.multiply(getSalario()).multiply(FATOR_HORA_EXTRA)));
+                        .add(horasExtras.multiply(getSalario()).multiply(ADICIONAL_HORA_EXTRA)));
 
-        ResultadoDesconto resultado = calcularDescontos(data, bruto);
-
-        return new Pagamento(getNome(), getTipo(), horasNormais, horasExtras,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                bruto, resultado.aplicados(), resultado.liquido(),
-                getMetodoPagamento().getDescricao(getEndereco()), resultado.avancaPeriodo());
+        return novoPagamento(ComposicaoDoBruto.deHorista(horasNormais, horasExtras), bruto, data);
     }
 }

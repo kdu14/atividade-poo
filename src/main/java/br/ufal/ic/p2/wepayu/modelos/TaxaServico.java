@@ -1,26 +1,18 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.util.Exigir;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class TaxaServico implements Serializable {
+/** Taxa de um servico do sindicato, cobrada no proximo pagamento. Imutavel. */
+public record TaxaServico(LocalDate data, BigDecimal valor) implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final LocalDate data;
-    private final BigDecimal valor;
-
-    public TaxaServico(LocalDate data, BigDecimal valor) {
-        this.data = data;
-        this.valor = valor;
-    }
-
-    public LocalDate getData() {
-        return data;
-    }
-
-    public BigDecimal getValor() {
-        return valor;
+    public TaxaServico {
+        Exigir.naoNulo(data, "Data da taxa de servico");
+        Exigir.positivo(valor, "Valor da taxa de servico");
     }
 }

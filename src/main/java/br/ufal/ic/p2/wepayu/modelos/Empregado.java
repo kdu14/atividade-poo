@@ -1,40 +1,36 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
-import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhComissionadoException;
-import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhHoristaException;
+import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoSindicalizadoException;
 import br.ufal.ic.p2.wepayu.util.Datas;
+import br.ufal.ic.p2.wepayu.util.Exigir;
+import br.ufal.ic.p2.wepayu.util.Periodo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Um empregado da folha de pagamento. Horista, assalariado e comissionado
- * sao subclasses concretas; operacoes que so fazem sentido pra algum tipo
- * (bater cartao, lancar venda, ter comissao) tem aqui uma implementacao
- * padrao que lanca erro, sobrescrita so onde se aplica -- assim ninguem
- * precisa checar o tipo do empregado antes de chamar o metodo.
+ * sao subclasses concretas; o que so vale para um tipo (cartao de ponto,
+ * venda, comissao) fica so na subclasse correspondente.
  */
 public abstract class Empregado implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    // O enunciado (US7) pede pra considerar todo assalariado/comissionado
+    // contratado em 1/1/2005, ja que criarEmpregado nao tem esse campo.
+    protected static final LocalDate DATA_CONTRATACAO_PADRAO = LocalDate.of(2005, 1, 1);
 
     private final String id;
     private String nome;
     private String endereco;
     private BigDecimal salario;
     private MetodoPagamento metodoPagamento = new EmMaos();
+    private MembroSindicato sindicato;
 
-    private boolean sindicalizado = false;
-    private String idSindicato;
-    private BigDecimal taxaSindical;
-    private final List<TaxaServico> taxasServico = new ArrayList<>();
-
-    // dia anterior ao inicio do proximo periodo a pagar: o periodo de um
-    // pagamento e sempre (dataBase, dataFolha]. Null pro horista que ainda
-    // nao lancou cartao nenhum (a contratacao so e conhecida no primeiro).
+    // dia anterior ao inicio do proximo periodo a pagar. Null pro horista que
+    // ainda nao lancou cartao nenhum (a contratacao so e conhecida no primeiro).
     private LocalDate dataBase;
 
     // ultimo pagamento calculado e pra que data -- necessario pra rodar a
@@ -42,11 +38,12 @@ public abstract class Empregado implements Serializable {
     private LocalDate ultimaDataProcessada;
     private Pagamento ultimoPagamentoCalculado;
 
-    protected Empregado(String id, String nome, String endereco, BigDecimal salario) {
-        this.id = id;
-        this.nome = nome;
-        this.endereco = endereco;
-        this.salario = salario;
+    protected Empregado(String id, String nome, String endereco, BigDecimal salario, LocalDate dataBaseInicial) {
+        this.id = Exigir.preenchido(id, "Identificacao do empregado");
+        setNome(nome);
+        setEndereco(endereco);
+        setSalario(salario);
+        this.dataBase = dataBaseInicial;
     }
 
     // ---- identificacao e dados basicos ----
@@ -59,24 +56,24 @@ public abstract class Empregado implements Serializable {
         return nome;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
+    public final void setNome(String nome) {
+        this.nome = Exigir.preenchido(nome, "Nome");
     }
 
     public String getEndereco() {
         return endereco;
     }
 
-    public void setEndereco(String endereco) {
-        this.endereco = endereco;
+    public final void setEndereco(String endereco) {
+        this.endereco = Exigir.preenchido(endereco, "Endereco");
     }
 
     public BigDecimal getSalario() {
         return salario;
     }
 
-    public void setSalario(BigDecimal salario) {
-        this.salario = salario;
+    public final void setSalario(BigDecimal salario) {
+        this.salario = Exigir.naoNegativo(salario, "Salario");
     }
 
     public MetodoPagamento getMetodoPagamento() {
@@ -84,81 +81,39 @@ public abstract class Empregado implements Serializable {
     }
 
     public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
-        this.metodoPagamento = metodoPagamento;
+        this.metodoPagamento = Exigir.naoNulo(metodoPagamento, "Metodo de pagamento");
     }
 
-    /** "horista", "assalariado" ou "comissionado" -- o mesmo texto que getAtributoEmpregado devolve. */
-    public abstract String getTipo();
+    public abstract TipoEmpregado getTipo();
 
     // ---- sindicato ----
 
     public boolean isSindicalizado() {
-        return sindicalizado;
+        return sindicato != null;
     }
 
-    public String getIdSindicato() {
-        return idSindicato;
+    public MembroSindicato getSindicato() throws EmpregadoNaoSindicalizadoException {
+        if (sindicato == null) {
+            throw new EmpregadoNaoSindicalizadoException();
+        }
+        return sindicato;
     }
 
-    public BigDecimal getTaxaSindical() {
-        return taxaSindical;
-    }
-
-    public void sindicalizar(String idSindicato, BigDecimal taxaSindicalDiaria) {
-        this.sindicalizado = true;
-        this.idSindicato = idSindicato;
-        this.taxaSindical = taxaSindicalDiaria;
+    /** Filia ao sindicato; se ja for filiado, so troca os dados e mantem as taxas lancadas. */
+    public void sindicalizar(String idSindicato, BigDecimal taxaSindical) {
+        sindicato = (sindicato == null)
+                ? new MembroSindicato(idSindicato, taxaSindical)
+                : sindicato.comNovosDados(idSindicato, taxaSindical);
     }
 
     public void dessindicalizar() {
-        this.sindicalizado = false;
-        this.idSindicato = null;
-        this.taxaSindical = null;
-        this.taxasServico.clear();
+        sindicato = null;
     }
 
-    public void lancarTaxaServico(LocalDate data, BigDecimal valor) {
-        taxasServico.add(new TaxaServico(data, valor));
-    }
-
-    public BigDecimal getTaxasServicoNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (TaxaServico t : taxasServico) {
-            if (Datas.dentroDoIntervalo(t.getData(), inicioInclusivo, fimExclusivo)) {
-                total = total.add(t.getValor());
-            }
-        }
-        return total;
-    }
-
-    // ---- operacoes que so fazem sentido para alguns tipos ----
-
-    public void lancarCartao(LocalDate data, BigDecimal horas) throws EmpregadoNaoEhHoristaException {
-        throw new EmpregadoNaoEhHoristaException();
-    }
-
-    public BigDecimal getHorasNormaisNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhHoristaException {
-        throw new EmpregadoNaoEhHoristaException();
-    }
-
-    public BigDecimal getHorasExtrasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhHoristaException {
-        throw new EmpregadoNaoEhHoristaException();
-    }
-
-    public void lancarVenda(LocalDate data, BigDecimal valor) throws EmpregadoNaoEhComissionadoException {
-        throw new EmpregadoNaoEhComissionadoException();
-    }
-
-    public BigDecimal getVendasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhComissionadoException {
-        throw new EmpregadoNaoEhComissionadoException();
-    }
-
-    public BigDecimal getComissao() throws EmpregadoNaoEhComissionadoException {
-        throw new EmpregadoNaoEhComissionadoException();
-    }
-
-    public void setComissao(BigDecimal comissao) throws EmpregadoNaoEhComissionadoException {
-        throw new EmpregadoNaoEhComissionadoException();
+    /** Usado na troca de tipo: o que nao depende do tipo passa para o novo objeto. */
+    public void transferirDadosComunsPara(Empregado novo) {
+        novo.metodoPagamento = metodoPagamento;
+        novo.sindicato = sindicato;
     }
 
     // ---- agenda e calculo de pagamento ----
@@ -200,11 +155,9 @@ public abstract class Empregado implements Serializable {
     }
 
     /**
-     * Desconto sindical devido no periodo (dataBase, data], sem deixar o
-     * contracheque negativo (Obs. 1 da US7 -- so vale pra horista, mas
-     * aplicar geral nao muda nada nos outros tipos). Quando corta, devolve
-     * avancaPeriodo=false: a dataBase fica parada, e o que faltou pagar
-     * se acumula sozinho, porque o proximo calculo conta os dias desde ali.
+     * Desconto sindical devido no periodo, sem deixar o contracheque negativo
+     * (Obs. 1 da US7). Quando corta, devolve avancaPeriodo=false: a dataBase
+     * fica parada, e o que faltou pagar se acumula no proximo calculo.
      */
     protected ResultadoDesconto calcularDescontos(LocalDate data, BigDecimal salarioBruto) {
         BigDecimal descontosDevidos = calcularDescontosDevidos(data);
@@ -215,14 +168,19 @@ public abstract class Empregado implements Serializable {
     }
 
     private BigDecimal calcularDescontosDevidos(LocalDate data) {
-        if (!sindicalizado) {
+        if (sindicato == null) {
             return BigDecimal.ZERO;
         }
-        LocalDate inicioPeriodo = dataBase.plusDays(1);
         long dias = Datas.diasEntre(dataBase, data);
-        BigDecimal totalSindical = taxaSindical.multiply(BigDecimal.valueOf(dias));
-        BigDecimal totalServicos = getTaxasServicoNoPeriodo(inicioPeriodo, data);
+        BigDecimal totalSindical = sindicato.getTaxaSindical().multiply(BigDecimal.valueOf(dias));
+        BigDecimal totalServicos = sindicato.getTaxasServicoNoPeriodo(new Periodo(dataBase.plusDays(1), data));
         return totalSindical.add(totalServicos);
+    }
+
+    protected Pagamento novoPagamento(ComposicaoDoBruto composicao, BigDecimal bruto, LocalDate data) {
+        ResultadoDesconto desconto = calcularDescontos(data, bruto);
+        return new Pagamento(nome, getTipo(), composicao, bruto, desconto.aplicados(), desconto.liquido(),
+                metodoPagamento.getDescricao(endereco), desconto.avancaPeriodo());
     }
 
     protected record ResultadoDesconto(BigDecimal aplicados, BigDecimal liquido, boolean avancaPeriodo) {

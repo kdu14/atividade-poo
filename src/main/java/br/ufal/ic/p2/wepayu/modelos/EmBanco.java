@@ -1,5 +1,8 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.util.Exigir;
+
+/** Deposito em conta corrente. */
 public class EmBanco extends MetodoPagamento {
 
     private static final long serialVersionUID = 1L;
@@ -9,9 +12,9 @@ public class EmBanco extends MetodoPagamento {
     private final String contaCorrente;
 
     public EmBanco(String banco, String agencia, String contaCorrente) {
-        this.banco = banco;
-        this.agencia = agencia;
-        this.contaCorrente = contaCorrente;
+        this.banco = Exigir.preenchido(banco, "Banco");
+        this.agencia = Exigir.preenchido(agencia, "Agencia");
+        this.contaCorrente = Exigir.preenchido(contaCorrente, "Conta corrente");
     }
 
     @Override

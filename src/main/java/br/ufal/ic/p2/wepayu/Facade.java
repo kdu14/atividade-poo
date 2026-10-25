@@ -1,15 +1,42 @@
 package br.ufal.ic.p2.wepayu;
 
 import br.ufal.ic.p2.wepayu.excecoes.WePayUException;
+import br.ufal.ic.p2.wepayu.persistencia.ArquivoDeDados;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDaFolha;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDeAlteracao;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDeEmpregados;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDeLancamentos;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDoSindicato;
+import br.ufal.ic.p2.wepayu.servicos.ServicoDoSistema;
+import br.ufal.ic.p2.wepayu.servicos.Sessao;
 
 /**
  * Fachada usada pelos testes de aceitacao (EasyAccept). Cada metodo publico
- * corresponde a um comando da linguagem de script e so repassa a chamada
- * pra Sistema, que concentra toda a logica de negocio.
+ * corresponde a um comando da linguagem de script e so repassa a chamada ao
+ * servico do assunto correspondente; o construtor apenas monta os servicos.
  */
 public class Facade {
 
-    private final Sistema sistema = new Sistema();
+    private static final String ARQUIVO_DE_DADOS = "wepayu.dat";
+
+    private final ServicoDoSistema sistema;
+    private final ServicoDeEmpregados empregados;
+    private final ServicoDeAlteracao alteracao;
+    private final ServicoDoSindicato sindicato;
+    private final ServicoDeLancamentos lancamentos;
+    private final ServicoDaFolha folha;
+
+    public Facade() throws WePayUException {
+        Sessao sessao = new Sessao(new ArquivoDeDados(ARQUIVO_DE_DADOS));
+        sistema = new ServicoDoSistema(sessao);
+        empregados = new ServicoDeEmpregados(sessao);
+        sindicato = new ServicoDoSindicato(sessao);
+        alteracao = new ServicoDeAlteracao(sessao, sindicato);
+        lancamentos = new ServicoDeLancamentos(sessao);
+        folha = new ServicoDaFolha(sessao);
+    }
+
+    // ---- sistema ----
 
     public void zerarSistema() throws WePayUException {
         sistema.zerarSistema();
@@ -27,79 +54,91 @@ public class Facade {
         sistema.redo();
     }
 
+    // ---- empregados ----
+
     public String criarEmpregado(String nome, String endereco, String tipo, String salario) throws WePayUException {
-        return sistema.criarEmpregado(nome, endereco, tipo, salario);
+        return empregados.criarEmpregado(nome, endereco, tipo, salario);
     }
 
-    public String criarEmpregado(String nome, String endereco, String tipo, String salario, String comissao) throws WePayUException {
-        return sistema.criarEmpregado(nome, endereco, tipo, salario, comissao);
+    public String criarEmpregado(String nome, String endereco, String tipo, String salario, String comissao)
+            throws WePayUException {
+        return empregados.criarEmpregado(nome, endereco, tipo, salario, comissao);
     }
 
     public void removerEmpregado(String emp) throws WePayUException {
-        sistema.removerEmpregado(emp);
+        empregados.removerEmpregado(emp);
     }
 
     public int getNumeroDeEmpregados() throws WePayUException {
-        return sistema.getNumeroDeEmpregados();
+        return empregados.getNumeroDeEmpregados();
     }
 
     public String getEmpregadoPorNome(String nome, String indice) throws WePayUException {
-        return sistema.getEmpregadoPorNome(nome, indice);
+        return empregados.getEmpregadoPorNome(nome, indice);
     }
 
     public String getAtributoEmpregado(String emp, String atributo) throws WePayUException {
-        return sistema.getAtributoEmpregado(emp, atributo);
+        return empregados.getAtributoEmpregado(emp, atributo);
     }
+
+    // ---- alteracao ----
 
     public void alteraEmpregado(String emp, String atributo, String valor) throws WePayUException {
-        sistema.alteraEmpregado(emp, atributo, valor);
+        alteracao.alteraEmpregado(emp, atributo, valor);
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor, String extra) throws WePayUException {
-        sistema.alteraEmpregado(emp, atributo, valor, extra);
+    public void alteraEmpregado(String emp, String atributo, String valor, String salarioOuComissao)
+            throws WePayUException {
+        alteracao.alteraEmpregado(emp, atributo, valor, salarioOuComissao);
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor, String idSindicato, String taxaSindical) throws WePayUException {
-        sistema.alteraEmpregado(emp, atributo, valor, idSindicato, taxaSindical);
+    public void alteraEmpregado(String emp, String atributo, String valor, String idSindicato, String taxaSindical)
+            throws WePayUException {
+        alteracao.alteraEmpregado(emp, atributo, valor, idSindicato, taxaSindical);
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor1, String banco, String agencia, String contaCorrente) throws WePayUException {
-        sistema.alteraEmpregado(emp, atributo, valor1, banco, agencia, contaCorrente);
+    public void alteraEmpregado(String emp, String atributo, String valor1, String banco, String agencia,
+                                String contaCorrente) throws WePayUException {
+        alteracao.alteraEmpregado(emp, atributo, valor1, banco, agencia, contaCorrente);
     }
+
+    // ---- lancamentos e sindicato ----
 
     public void lancaCartao(String emp, String data, String horas) throws WePayUException {
-        sistema.lancaCartao(emp, data, horas);
+        lancamentos.lancaCartao(emp, data, horas);
     }
 
     public void lancaVenda(String emp, String data, String valor) throws WePayUException {
-        sistema.lancaVenda(emp, data, valor);
+        lancamentos.lancaVenda(emp, data, valor);
     }
 
     public void lancaTaxaServico(String membro, String data, String valor) throws WePayUException {
-        sistema.lancaTaxaServico(membro, data, valor);
+        sindicato.lancaTaxaServico(membro, data, valor);
     }
 
     public String getHorasNormaisTrabalhadas(String emp, String dataInicial, String dataFinal) throws WePayUException {
-        return sistema.getHorasNormaisTrabalhadas(emp, dataInicial, dataFinal);
+        return lancamentos.getHorasNormaisTrabalhadas(emp, dataInicial, dataFinal);
     }
 
     public String getHorasExtrasTrabalhadas(String emp, String dataInicial, String dataFinal) throws WePayUException {
-        return sistema.getHorasExtrasTrabalhadas(emp, dataInicial, dataFinal);
+        return lancamentos.getHorasExtrasTrabalhadas(emp, dataInicial, dataFinal);
     }
 
     public String getVendasRealizadas(String emp, String dataInicial, String dataFinal) throws WePayUException {
-        return sistema.getVendasRealizadas(emp, dataInicial, dataFinal);
+        return lancamentos.getVendasRealizadas(emp, dataInicial, dataFinal);
     }
 
     public String getTaxasServico(String emp, String dataInicial, String dataFinal) throws WePayUException {
-        return sistema.getTaxasServico(emp, dataInicial, dataFinal);
+        return sindicato.getTaxasServico(emp, dataInicial, dataFinal);
     }
 
+    // ---- folha ----
+
     public String totalFolha(String data) throws WePayUException {
-        return sistema.totalFolha(data);
+        return folha.totalFolha(data);
     }
 
     public void rodaFolha(String data, String saida) throws WePayUException {
-        sistema.rodaFolha(data, saida);
+        folha.rodaFolha(data, saida);
     }
 }

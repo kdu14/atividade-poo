@@ -1,26 +1,18 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.util.Exigir;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public class CartaoPonto implements Serializable {
+/** Horas trabalhadas por um horista num dia. Imutavel depois de criado. */
+public record CartaoPonto(LocalDate data, BigDecimal horas) implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final LocalDate data;
-    private final BigDecimal horas;
-
-    public CartaoPonto(LocalDate data, BigDecimal horas) {
-        this.data = data;
-        this.horas = horas;
-    }
-
-    public LocalDate getData() {
-        return data;
-    }
-
-    public BigDecimal getHoras() {
-        return horas;
+    public CartaoPonto {
+        Exigir.naoNulo(data, "Data do cartao");
+        Exigir.positivo(horas, "Horas do cartao");
     }
 }
