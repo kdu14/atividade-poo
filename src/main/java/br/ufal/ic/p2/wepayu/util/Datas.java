@@ -19,6 +19,13 @@ public class Datas {
     private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("d/M/uuuu")
             .withResolverStyle(ResolverStyle.STRICT);
 
+    /**
+     * Onde o calendario do sistema comeca: o enunciado (US7) manda assumir
+     * que assalariados e comissionados foram contratados em 1/1/2005, e as
+     * agendas semanais contam as semanas a partir dai.
+     */
+    public static final LocalDate INICIO_DO_CALENDARIO = LocalDate.of(2005, 1, 1);
+
     private Datas() {
     }
 

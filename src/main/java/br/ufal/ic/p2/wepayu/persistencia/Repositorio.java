@@ -1,7 +1,10 @@
 package br.ufal.ic.p2.wepayu.persistencia;
 
+import br.ufal.ic.p2.wepayu.excecoes.AgendaIndisponivelException;
 import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoExisteException;
+import br.ufal.ic.p2.wepayu.fabricas.FabricaDeAgendas;
 import br.ufal.ic.p2.wepayu.modelos.Empregado;
+import br.ufal.ic.p2.wepayu.modelos.agenda.AgendaPagamento;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -12,8 +15,9 @@ import java.util.Optional;
 
 /**
  * Todo o estado do sistema: os empregados, o indice de identificacoes do
- * sindicato e o contador de ids. E este objeto inteiro que vai para o
- * arquivo de dados e para as fotos do undo/redo.
+ * sindicato, o contador de ids e as agendas de pagamento disponiveis. E
+ * este objeto inteiro que vai para o arquivo de dados e para as fotos do
+ * undo/redo.
  */
 public class Repositorio implements Serializable {
 
@@ -22,6 +26,7 @@ public class Repositorio implements Serializable {
     private Map<String, Empregado> empregados = new LinkedHashMap<>();
     private Map<String, String> empregadoPorIdSindicato = new LinkedHashMap<>();
     private int proximoId = 1;
+    private Map<String, AgendaPagamento> agendasDisponiveis = agendasPadrao();
 
     public Empregado buscar(String id) throws EmpregadoNaoExisteException {
         Empregado empregado = empregados.get(id);
@@ -67,6 +72,14 @@ public class Repositorio implements Serializable {
         }
     }
 
+    public AgendaPagamento agendaDisponivel(String descricao) throws AgendaIndisponivelException {
+        AgendaPagamento agenda = agendasDisponiveis.get(descricao);
+        if (agenda == null) {
+            throw new AgendaIndisponivelException();
+        }
+        return agenda;
+    }
+
     public void zerar() {
         copiarDe(new Repositorio());
     }
@@ -76,5 +89,14 @@ public class Repositorio implements Serializable {
         empregados = outro.empregados;
         empregadoPorIdSindicato = outro.empregadoPorIdSindicato;
         proximoId = outro.proximoId;
+        agendasDisponiveis = outro.agendasDisponiveis;
+    }
+
+    private static Map<String, AgendaPagamento> agendasPadrao() {
+        Map<String, AgendaPagamento> agendas = new LinkedHashMap<>();
+        for (AgendaPagamento agenda : FabricaDeAgendas.padroes()) {
+            agendas.put(agenda.getDescricao(), agenda);
+        }
+        return agendas;
     }
 }

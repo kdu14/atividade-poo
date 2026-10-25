@@ -1,18 +1,18 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.modelos.agenda.AgendaPagamento;
 import br.ufal.ic.p2.wepayu.util.Datas;
-import br.ufal.ic.p2.wepayu.util.Dinheiro;
+import br.ufal.ic.p2.wepayu.util.Periodo;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
-/** Recebe um salario fixo mensal. */
+/** Recebe um salario fixo mensal, dividido conforme a agenda de pagamento. */
 public class EmpregadoAssalariado extends Empregado {
 
     private static final long serialVersionUID = 1L;
 
-    public EmpregadoAssalariado(String id, String nome, String endereco, BigDecimal salarioMensal) {
-        super(id, nome, endereco, salarioMensal, DATA_CONTRATACAO_PADRAO.minusDays(1));
+    public EmpregadoAssalariado(String id, String nome, String endereco, BigDecimal salarioMensal, AgendaPagamento agenda) {
+        super(id, nome, endereco, salarioMensal, agenda, Datas.INICIO_DO_CALENDARIO);
     }
 
     @Override
@@ -21,12 +21,7 @@ public class EmpregadoAssalariado extends Empregado {
     }
 
     @Override
-    public boolean estaNaDataDePagamento(LocalDate data) {
-        return data.equals(Datas.ultimoDiaUtilDoMes(data));
-    }
-
-    @Override
-    protected Pagamento calcularPagamentoNovo(LocalDate data) {
-        return novoPagamento(ComposicaoDoBruto.semDetalhe(), Dinheiro.truncar(getSalario()), data);
+    protected SalarioBruto calcularBruto(Periodo periodo) {
+        return SalarioBruto.fixo(parcelaDoSalarioFixo());
     }
 }

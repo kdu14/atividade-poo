@@ -40,6 +40,7 @@ public class ServicoDeAlteracao extends Servico {
         alteradores.put("tipo", (e, valor) -> mudarTipo(e, valor, null));
         alteradores.put("sindicalizado", this::alterarSindicalizado);
         alteradores.put("metodoPagamento", this::alterarMetodoPagamento);
+        alteradores.put("agendaPagamento", (e, valor) -> e.setAgenda(sessao.dados().agendaDisponivel(valor)));
     }
 
     public void alteraEmpregado(String id, String atributo, String valor) throws WePayUException {

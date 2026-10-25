@@ -87,14 +87,14 @@ public class Formatador {
 
         for (Pagamento p : linhas) {
             sb.append(padDireita(p.nome(), 36)).append(' ')
-                    .append(padEsquerda(Horas.formatar(p.composicao().horasNormais()), 5)).append(' ')
-                    .append(padEsquerda(Horas.formatar(p.composicao().horasExtras()), 5)).append(' ')
+                    .append(padEsquerda(Horas.formatar(p.bruto().horasNormais()), 5)).append(' ')
+                    .append(padEsquerda(Horas.formatar(p.bruto().horasExtras()), 5)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioBruto()), 13)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.descontos()), 9)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioLiquido()), 15)).append(' ')
                     .append(p.metodoDescricao()).append('\n');
-            totalHoras = totalHoras.add(p.composicao().horasNormais());
-            totalExtra = totalExtra.add(p.composicao().horasExtras());
+            totalHoras = totalHoras.add(p.bruto().horasNormais());
+            totalExtra = totalExtra.add(p.bruto().horasExtras());
             totalBruto = totalBruto.add(p.salarioBruto());
             totalDescontos = totalDescontos.add(p.descontos());
             totalLiquido = totalLiquido.add(p.salarioLiquido());
@@ -165,16 +165,16 @@ public class Formatador {
 
         for (Pagamento p : linhas) {
             sb.append(padDireita(p.nome(), 21)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.composicao().salarioFixo()), 8)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.composicao().vendas()), 8)).append(' ')
-                    .append(padEsquerda(Dinheiro.formatar(p.composicao().comissao()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.bruto().salarioFixo()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.bruto().vendas()), 8)).append(' ')
+                    .append(padEsquerda(Dinheiro.formatar(p.bruto().comissao()), 8)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioBruto()), 13)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.descontos()), 9)).append(' ')
                     .append(padEsquerda(Dinheiro.formatar(p.salarioLiquido()), 15)).append(' ')
                     .append(p.metodoDescricao()).append('\n');
-            totalFixo = totalFixo.add(p.composicao().salarioFixo());
-            totalVendas = totalVendas.add(p.composicao().vendas());
-            totalComissao = totalComissao.add(p.composicao().comissao());
+            totalFixo = totalFixo.add(p.bruto().salarioFixo());
+            totalVendas = totalVendas.add(p.bruto().vendas());
+            totalComissao = totalComissao.add(p.bruto().comissao());
             totalBruto = totalBruto.add(p.salarioBruto());
             totalDescontos = totalDescontos.add(p.descontos());
             totalLiquido = totalLiquido.add(p.salarioLiquido());

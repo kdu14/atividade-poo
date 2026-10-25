@@ -41,6 +41,7 @@ public class ServicoDeEmpregados extends Servico {
         leitores.put("banco", e -> e.getMetodoPagamento().getBanco());
         leitores.put("agencia", e -> e.getMetodoPagamento().getAgencia());
         leitores.put("contaCorrente", e -> e.getMetodoPagamento().getContaCorrente());
+        leitores.put("agendaPagamento", e -> e.getAgenda().getDescricao());
     }
 
     public String criarEmpregado(String nome, String endereco, String tipo, String salario) throws WePayUException {

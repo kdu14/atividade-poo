@@ -1,12 +1,11 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
 import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhHoristaException;
-import br.ufal.ic.p2.wepayu.util.Datas;
+import br.ufal.ic.p2.wepayu.modelos.agenda.AgendaPagamento;
 import br.ufal.ic.p2.wepayu.util.Dinheiro;
 import br.ufal.ic.p2.wepayu.util.Periodo;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,12 +19,9 @@ public class EmpregadoHorista extends Empregado {
 
     private final List<CartaoPonto> cartoes = new ArrayList<>();
 
-    /**
-     * A dataBase fica null ate o primeiro cartao: o enunciado diz que o
-     * horista e contratado no primeiro dia em que lancar um cartao.
-     */
-    public EmpregadoHorista(String id, String nome, String endereco, BigDecimal salarioPorHora) {
-        super(id, nome, endereco, salarioPorHora, null);
+    /** Sem data de contratacao: ela e o dia do primeiro cartao lancado. */
+    public EmpregadoHorista(String id, String nome, String endereco, BigDecimal salarioPorHora, AgendaPagamento agenda) {
+        super(id, nome, endereco, salarioPorHora, agenda, null);
     }
 
     /** O proprio empregado, se for horista; senao, o erro de negocio. */
@@ -43,8 +39,8 @@ public class EmpregadoHorista extends Empregado {
 
     public void lancarCartao(CartaoPonto cartao) {
         cartoes.add(cartao);
-        if (getDataBase() == null) {
-            setDataBase(cartao.data().minusDays(1));
+        if (!jaContratado()) {
+            definirContratacao(cartao.data());
         }
     }
 
@@ -69,26 +65,12 @@ public class EmpregadoHorista extends Empregado {
     }
 
     @Override
-    public boolean estaNaDataDePagamento(LocalDate data) {
-        // todo horista e pago toda sexta-feira, tenha ele batido ponto ou nao.
-        return Datas.ehSextaFeira(data);
-    }
-
-    @Override
-    protected Pagamento calcularPagamentoNovo(LocalDate data) {
-        if (getDataBase() == null) {
-            // nunca lancou cartao: aparece na folha, mas nao ha nada a calcular ainda.
-            return novoPagamento(ComposicaoDoBruto.deHorista(BigDecimal.ZERO, BigDecimal.ZERO), BigDecimal.ZERO, data);
-        }
-
-        Periodo periodo = new Periodo(getDataBase().plusDays(1), data);
+    protected SalarioBruto calcularBruto(Periodo periodo) {
         BigDecimal horasNormais = getHorasNormaisNoPeriodo(periodo);
         BigDecimal horasExtras = getHorasExtrasNoPeriodo(periodo);
-
-        BigDecimal bruto = Dinheiro.truncar(
+        BigDecimal valor = Dinheiro.truncar(
                 horasNormais.multiply(getSalario())
                         .add(horasExtras.multiply(getSalario()).multiply(ADICIONAL_HORA_EXTRA)));
-
-        return novoPagamento(ComposicaoDoBruto.deHorista(horasNormais, horasExtras), bruto, data);
+        return SalarioBruto.deHorista(valor, horasNormais, horasExtras);
     }
 }
