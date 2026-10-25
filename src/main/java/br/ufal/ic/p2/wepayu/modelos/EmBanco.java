@@ -28,11 +28,6 @@ public class EmBanco extends MetodoPagamento {
     }
 
     @Override
-    public boolean recebeEmBanco() {
-        return true;
-    }
-
-    @Override
     public String getBanco() {
         return banco;
     }

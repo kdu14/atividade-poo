@@ -1,9 +1,12 @@
+package br.ufal.ic.p2.wepayu;
+
 import easyaccept.EasyAccept;
 
 import java.io.File;
 
 /**
- * Roda os testes de aceitacao (User Stories 1 a 10) usando o EasyAccept.
+ * Roda os testes de aceitacao (User Stories 1 a 10) usando o EasyAccept,
+ * e no fim os testes extras do Milestone 2 (tests/extras, escritos por nos).
  * Cada chamada abaixo cria uma nova Facade (como se fosse um processo Java
  * separado) -- e assim que a persistencia em disco entre um script e o seu
  * par de continuacao "_1" e realmente testada.
@@ -30,7 +33,8 @@ public class Main {
                 "tests/us9.txt",
                 "tests/us9_1.txt",
                 "tests/us10.txt",
-                "tests/us10_1.txt"
+                "tests/us10_1.txt",
+                "tests/extras/agendas.txt"
         };
 
         // comeca de um estado limpo: um wepayu.dat que sobrou de uma execucao

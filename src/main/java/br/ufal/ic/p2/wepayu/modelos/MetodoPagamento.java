@@ -14,11 +14,6 @@ public abstract class MetodoPagamento implements Serializable {
     /** A descricao usada na coluna "Metodo" do relatorio de folha. */
     public abstract String getDescricao(String enderecoEmpregado);
 
-    // so EmBanco sobrescreve pra true -- evita instanceof pra saber o tipo.
-    public boolean recebeEmBanco() {
-        return false;
-    }
-
     public String getBanco() throws EmpregadoNaoRecebeEmBancoException {
         throw new EmpregadoNaoRecebeEmBancoException();
     }

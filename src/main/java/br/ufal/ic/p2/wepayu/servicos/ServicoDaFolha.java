@@ -4,8 +4,8 @@ import br.ufal.ic.p2.wepayu.excecoes.ArquivoException;
 import br.ufal.ic.p2.wepayu.excecoes.WePayUException;
 import br.ufal.ic.p2.wepayu.modelos.Empregado;
 import br.ufal.ic.p2.wepayu.modelos.Pagamento;
+import br.ufal.ic.p2.wepayu.relatorio.RelatorioDaFolha;
 import br.ufal.ic.p2.wepayu.util.Dinheiro;
-import br.ufal.ic.p2.wepayu.util.Formatador;
 import br.ufal.ic.p2.wepayu.validacao.Entrada;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class ServicoDaFolha extends Servico {
         sessao.alterar(() -> {
             LocalDate data = Entrada.data(dataTexto, "Data invalida.");
             Map<Empregado, Pagamento> pagamentos = calcularPagamentos(data);
-            gravar(arquivoSaida, Formatador.montarRelatorio(data, pagamentos.values()));
+            gravar(arquivoSaida, RelatorioDaFolha.montar(data, pagamentos.values()));
             pagamentos.forEach((empregado, pagamento) -> empregado.confirmarPagamento(pagamento, data));
         });
     }

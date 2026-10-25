@@ -7,6 +7,7 @@ target/
 # os gabaritos de mesmo nome que ficam dentro de ok/
 /wepayu.dat
 /folha-*.txt
+/tests/extras/saida-*.txt
 
 # IDE
 .idea/
