@@ -10,7 +10,7 @@ import java.time.temporal.ChronoUnit;
 
 // datas no formato d/M/yyyy do enunciado (ex.: "1/1/2005"); nao decide
 // mensagem de erro, isso varia por comando e fica por conta de quem chama.
-public class Datas {
+public final class Datas {
 
     // uuuu (ano proleptico), nao yyyy (ano-da-era): com STRICT, yyyy exige
     // uma era explicita e sempre falha sem ela. E STRICT que faz 30/2/2005
@@ -18,6 +18,13 @@ public class Datas {
     // 28/2 sem avisar nada.
     private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("d/M/uuuu")
             .withResolverStyle(ResolverStyle.STRICT);
+
+    /**
+     * Onde o calendario do sistema comeca: o enunciado (US7) manda assumir
+     * que assalariados e comissionados foram contratados em 1/1/2005, e as
+     * agendas semanais contam as semanas a partir dai.
+     */
+    public static final LocalDate INICIO_DO_CALENDARIO = LocalDate.of(2005, 1, 1);
 
     private Datas() {
     }
@@ -30,21 +37,8 @@ public class Datas {
         }
     }
 
-    public static boolean ehValida(String texto) {
-        try {
-            parse(texto);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
     public static long diasEntre(LocalDate inicioExclusivo, LocalDate fim) {
         return ChronoUnit.DAYS.between(inicioExclusivo, fim);
-    }
-
-    public static boolean ehSextaFeira(LocalDate data) {
-        return data.getDayOfWeek() == DayOfWeek.FRIDAY;
     }
 
     /**
@@ -58,10 +52,5 @@ public class Datas {
             ultimoDia = ultimoDia.minusDays(1);
         }
         return ultimoDia;
-    }
-
-    /** [inicioInclusivo, fimExclusivo) -- e o intervalo usado em toda a folha. */
-    public static boolean dentroDoIntervalo(LocalDate data, LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        return !data.isBefore(inicioInclusivo) && data.isBefore(fimExclusivo);
     }
 }

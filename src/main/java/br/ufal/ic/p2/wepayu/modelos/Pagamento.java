@@ -4,23 +4,23 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * O resultado de rodar a folha pra UM empregado, num dia especifico. Nem
- * todo campo vale pra todo tipo (horasNormais/Extras so pra horista,
- * fixo/vendas/comissao so pra comissionado) -- os que nao se aplicam ficam
- * em BigDecimal.ZERO.
+ * O resultado de rodar a folha pra UM empregado, num dia especifico.
+ * dividaSindicalRestante e o que nao coube nos descontos deste pagamento
+ * e fica para o proximo (Obs. 1 da US7).
  */
 public record Pagamento(
         String nome,
-        String tipo,
-        BigDecimal horasNormais,
-        BigDecimal horasExtras,
-        BigDecimal salarioFixo,
-        BigDecimal vendas,
-        BigDecimal comissao,
-        BigDecimal salarioBruto,
+        TipoEmpregado tipo,
+        SalarioBruto bruto,
         BigDecimal descontos,
         BigDecimal salarioLiquido,
         String metodoDescricao,
-        boolean avancaPeriodo
+        BigDecimal dividaSindicalRestante
 ) implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    public BigDecimal salarioBruto() {
+        return bruto.valor();
+    }
 }

@@ -1,0 +1,101 @@
+#####################################################################################
+# Testes extras do Milestone 2 (nossos, nao sao do professor).
+# Cobrem o que os scripts oficiais nao cobrem: agendas personalizadas para
+# horista e comissionado, troca de tipo, undo/redo de agenda, divida sindical
+# e os pontos apontados na revisao do Milestone 1.
+# 1/1/2005 e um sabado.
+#####################################################################################
+
+# 1. horista em agenda mensal personalizada: so e contratado no primeiro cartao,
+#    e o pagamento cobre do dia seguinte ao pagamento anterior ate o dia, inclusive
+zerarSistema
+criarAgendaDePagamentos descricao="mensal 7"
+id1=criarEmpregado nome="Horista Mensal" endereco="Rua A" tipo=horista salario=10
+alteraEmpregado emp=${id1} atributo=agendaPagamento valor1="mensal 7"
+lancaCartao emp=${id1} data=10/1/2005 horas=8
+lancaCartao emp=${id1} data=20/1/2005 horas=10
+lancaCartao emp=${id1} data=7/2/2005 horas=8
+expect 0,00 totalFolha data=7/1/2005
+expect 0,00 totalFolha data=14/1/2005
+expect 270,00 totalFolha data=7/2/2005
+expect 0,00 totalFolha data=11/2/2005
+
+# 2. comissionado pago toda quarta-feira; a venda feita no proprio dia do pagamento entra
+zerarSistema
+criarAgendaDePagamentos descricao="semanal 3"
+id1=criarEmpregado nome="Comissionado Quarta" endereco="Rua B" tipo=comissionado salario=2800 comissao=0,10
+alteraEmpregado emp=${id1} atributo=agendaPagamento valor1="semanal 3"
+lancaVenda emp=${id1} data=5/1/2005 valor=100
+lancaVenda emp=${id1} data=12/1/2005 valor=200
+expect 656,15 totalFolha data=5/1/2005
+expect 666,15 totalFolha data=12/1/2005
+expect 646,15 totalFolha data=19/1/2005
+expect 0,00 totalFolha data=14/1/2005
+
+# 3. horista pago na sexta inclui o cartao da propria sexta
+zerarSistema
+id1=criarEmpregado nome="Horista Sexta" endereco="Rua C" tipo=horista salario=10
+lancaCartao emp=${id1} data=7/1/2005 horas=8
+expect 80,00 totalFolha data=7/1/2005
+expect 0,00 totalFolha data=14/1/2005
+
+# 4. troca de tipo: quem esta na agenda padrao passa para a padrao do tipo novo;
+#    quem escolheu outra agenda continua com ela
+zerarSistema
+criarAgendaDePagamentos descricao="mensal 7"
+id1=criarEmpregado nome="Padrao" endereco="Rua D" tipo=horista salario=10
+alteraEmpregado emp=${id1} atributo=tipo valor=assalariado
+expect "mensal $" getAtributoEmpregado emp=${id1} atributo=agendaPagamento
+id2=criarEmpregado nome="Escolheu" endereco="Rua E" tipo=horista salario=10
+alteraEmpregado emp=${id2} atributo=agendaPagamento valor1="mensal 7"
+alteraEmpregado emp=${id2} atributo=tipo valor=comissionado comissao=0,05
+expect "mensal 7" getAtributoEmpregado emp=${id2} atributo=agendaPagamento
+
+# 5. undo/redo de criarAgendaDePagamentos
+zerarSistema
+criarAgendaDePagamentos descricao="mensal 10"
+undo
+criarAgendaDePagamentos descricao="mensal 10"
+undo
+redo
+expecterror "Agenda de pagamentos ja existe" criarAgendaDePagamentos descricao="mensal 10"
+
+# 6. comando que falha nao muda nada: a agenda do empregado continua a mesma
+zerarSistema
+id1=criarEmpregado nome="Fica" endereco="Rua F" tipo=assalariado salario=1000
+expecterror "Agenda de pagamento nao esta disponivel" alteraEmpregado emp=${id1} atributo=agendaPagamento valor1="mensal 3"
+expect "mensal $" getAtributoEmpregado emp=${id1} atributo=agendaPagamento
+
+# 7. descricao com espacos a mais vale a mesma agenda; descricoes invalidas
+zerarSistema
+criarAgendaDePagamentos descricao="semanal   2"
+expecterror "Agenda de pagamentos ja existe" criarAgendaDePagamentos descricao="semanal 2"
+expecterror "Descricao de agenda invalida" criarAgendaDePagamentos descricao=""
+expecterror "Descricao de agenda invalida" criarAgendaDePagamentos descricao="mensal x"
+expecterror "Descricao de agenda invalida" criarAgendaDePagamentos descricao="semanal 2 3 4"
+expecterror "Descricao de agenda invalida" criarAgendaDePagamentos descricao="anual 1"
+
+# 8. revisao do Milestone 1: o id nao e consumido por um criarEmpregado que falha
+zerarSistema
+expecterror "Comissao deve ser numerica." criarEmpregado nome="X" endereco="Y" tipo=comissionado salario=100 comissao=abc
+expect 1 criarEmpregado nome="X" endereco="Y" tipo=horista salario=10
+
+# 9. revisao do Milestone 1: divida sindical do horista. Na primeira sexta o salario
+#    (10,00) nao cobre a taxa (5 dias x 10,00 = 50,00): a folha vem zerada e os 40,00
+#    que faltaram ficam para a proxima. As horas da primeira semana NAO se repetem.
+zerarSistema
+id1=criarEmpregado nome="Endividado" endereco="Rua G" tipo=horista salario=10
+alteraEmpregado emp=${id1} atributo=sindicalizado valor=true idSindicato=s1 taxaSindical=10
+lancaCartao emp=${id1} data=3/1/2005 horas=1
+rodaFolha data=7/1/2005 saida=tests/extras/saida-divida-2005-01-07.txt
+equalFiles file1=tests/extras/ok/divida-2005-01-07.txt file2=tests/extras/saida-divida-2005-01-07.txt
+lancaCartao emp=${id1} data=10/1/2005 horas=8
+lancaCartao emp=${id1} data=11/1/2005 horas=8
+lancaCartao emp=${id1} data=12/1/2005 horas=8
+lancaCartao emp=${id1} data=13/1/2005 horas=8
+lancaCartao emp=${id1} data=14/1/2005 horas=8
+expect 400,00 totalFolha data=14/1/2005
+rodaFolha data=14/1/2005 saida=tests/extras/saida-divida-2005-01-14.txt
+equalFiles file1=tests/extras/ok/divida-2005-01-14.txt file2=tests/extras/saida-divida-2005-01-14.txt
+
+quit

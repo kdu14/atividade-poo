@@ -6,7 +6,7 @@
 
     <groupId>br.ufal.ic.p2</groupId>
     <artifactId>wepayu</artifactId>
-    <version>1.0-milestone1</version>
+    <version>1.0-milestone2</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -46,7 +46,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.4.1</version>
                 <configuration>
-                    <mainClass>Main</mainClass>
+                    <mainClass>br.ufal.ic.p2.wepayu.Main</mainClass>
                     <classpathScope>compile</classpathScope>
                 </configuration>
             </plugin>

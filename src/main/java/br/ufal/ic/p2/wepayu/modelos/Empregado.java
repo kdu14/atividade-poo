@@ -1,48 +1,59 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoSindicalizadoException;
+import br.ufal.ic.p2.wepayu.modelos.agenda.AgendaPagamento;
 import br.ufal.ic.p2.wepayu.util.Datas;
+import br.ufal.ic.p2.wepayu.util.Dinheiro;
+import br.ufal.ic.p2.wepayu.util.Exigir;
+import br.ufal.ic.p2.wepayu.util.Periodo;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Um empregado da folha de pagamento. Horista, assalariado e comissionado
- * sao subclasses concretas; operacoes que so fazem sentido pra algum tipo
- * (bater cartao, lancar venda, ter comissao) tem aqui uma implementacao
- * padrao que lanca erro, sobrescrita so onde se aplica -- assim ninguem
- * precisa checar o tipo do empregado antes de chamar o metodo.
+ * sao subclasses concretas; o que so vale para um tipo (cartao de ponto,
+ * venda, comissao) fica so na subclasse correspondente.
+ *
+ * Quando o empregado e pago, e qual periodo cada pagamento cobre, vem da
+ * agenda de pagamento dele; a subclasse so diz quanto ganhou no periodo.
  */
 public abstract class Empregado implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String id;
     private String nome;
     private String endereco;
     private BigDecimal salario;
     private MetodoPagamento metodoPagamento = new EmMaos();
+    private MembroSindicato sindicato;
+    private AgendaPagamento agenda;
 
-    private boolean sindicalizado = false;
-    private String idSindicato;
-    private BigDecimal taxaSindical;
-    private final List<TaxaServico> taxasServico = new ArrayList<>();
+    // null so para o horista que ainda nao lancou cartao: o enunciado diz que
+    // ele e contratado no primeiro dia em que lancar um.
+    private LocalDate dataContratacao;
 
-    // dia anterior ao inicio do proximo periodo a pagar: o periodo de um
-    // pagamento e sempre (dataBase, dataFolha]. Null pro horista que ainda
-    // nao lancou cartao nenhum (a contratacao so e conhecida no primeiro).
-    private LocalDate dataBase;
+    // ultimo dia cuja taxa sindical ja foi cobrada (o dia do ultimo pagamento,
+    // ou a vespera da contratacao, antes do primeiro).
+    private LocalDate ultimoDiaPago;
 
-    // ultimo pagamento calculado e pra que data -- necessario pra rodar a
-    // folha duas vezes na mesma data dar o mesmo resultado (ver calcularPagamento).
+    // ultimo pagamento confirmado e pra que data -- rodar a folha de novo na
+    // mesma data deve dar o mesmo resultado (ver calcularPagamento).
     private LocalDate ultimaDataProcessada;
     private Pagamento ultimoPagamentoCalculado;
 
-    protected Empregado(String id, String nome, String endereco, BigDecimal salario) {
-        this.id = id;
-        this.nome = nome;
-        this.endereco = endereco;
-        this.salario = salario;
+    protected Empregado(String id, String nome, String endereco, BigDecimal salario,
+                        AgendaPagamento agenda, LocalDate dataContratacao) {
+        this.id = Exigir.preenchido(id, "Identificacao do empregado");
+        setNome(nome);
+        setEndereco(endereco);
+        setSalario(salario);
+        setAgenda(agenda);
+        if (dataContratacao != null) {
+            definirContratacao(dataContratacao);
+        }
     }
 
     // ---- identificacao e dados basicos ----
@@ -55,24 +66,24 @@ public abstract class Empregado implements Serializable {
         return nome;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
+    public final void setNome(String nome) {
+        this.nome = Exigir.preenchido(nome, "Nome");
     }
 
     public String getEndereco() {
         return endereco;
     }
 
-    public void setEndereco(String endereco) {
-        this.endereco = endereco;
+    public final void setEndereco(String endereco) {
+        this.endereco = Exigir.preenchido(endereco, "Endereco");
     }
 
     public BigDecimal getSalario() {
         return salario;
     }
 
-    public void setSalario(BigDecimal salario) {
-        this.salario = salario;
+    public final void setSalario(BigDecimal salario) {
+        this.salario = Exigir.naoNegativo(salario, "Salario");
     }
 
     public MetodoPagamento getMetodoPagamento() {
@@ -80,147 +91,131 @@ public abstract class Empregado implements Serializable {
     }
 
     public void setMetodoPagamento(MetodoPagamento metodoPagamento) {
-        this.metodoPagamento = metodoPagamento;
+        this.metodoPagamento = Exigir.naoNulo(metodoPagamento, "Metodo de pagamento");
     }
 
-    /** "horista", "assalariado" ou "comissionado" -- o mesmo texto que getAtributoEmpregado devolve. */
-    public abstract String getTipo();
+    public AgendaPagamento getAgenda() {
+        return agenda;
+    }
+
+    public final void setAgenda(AgendaPagamento agenda) {
+        this.agenda = Exigir.naoNulo(agenda, "Agenda de pagamento");
+    }
+
+    public abstract TipoEmpregado getTipo();
+
+    /** So o horista define a contratacao depois de criado (no primeiro cartao). */
+    protected final void definirContratacao(LocalDate data) {
+        dataContratacao = data;
+        ultimoDiaPago = data.minusDays(1);
+    }
+
+    protected final boolean jaContratado() {
+        return dataContratacao != null;
+    }
 
     // ---- sindicato ----
 
     public boolean isSindicalizado() {
-        return sindicalizado;
+        return sindicato != null;
     }
 
-    public String getIdSindicato() {
-        return idSindicato;
+    public MembroSindicato getSindicato() throws EmpregadoNaoSindicalizadoException {
+        if (sindicato == null) {
+            throw new EmpregadoNaoSindicalizadoException();
+        }
+        return sindicato;
     }
 
-    public BigDecimal getTaxaSindical() {
-        return taxaSindical;
-    }
-
-    public void sindicalizar(String idSindicato, BigDecimal taxaSindicalDiaria) {
-        this.sindicalizado = true;
-        this.idSindicato = idSindicato;
-        this.taxaSindical = taxaSindicalDiaria;
+    /** Filia ao sindicato; se ja for filiado, so troca os dados e mantem taxas e divida. */
+    public void sindicalizar(String idSindicato, BigDecimal taxaSindical) {
+        sindicato = (sindicato == null)
+                ? new MembroSindicato(idSindicato, taxaSindical)
+                : sindicato.comNovosDados(idSindicato, taxaSindical);
     }
 
     public void dessindicalizar() {
-        this.sindicalizado = false;
-        this.idSindicato = null;
-        this.taxaSindical = null;
-        this.taxasServico.clear();
+        sindicato = null;
     }
 
-    public void lancarTaxaServico(LocalDate data, BigDecimal valor) {
-        taxasServico.add(new TaxaServico(data, valor));
+    /** Usado na troca de tipo: o que nao depende do tipo passa para o novo objeto. */
+    public void transferirDadosComunsPara(Empregado novo) {
+        novo.metodoPagamento = metodoPagamento;
+        novo.sindicato = sindicato;
     }
 
-    public BigDecimal getTaxasServicoNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (TaxaServico t : taxasServico) {
-            if (Datas.dentroDoIntervalo(t.getData(), inicioInclusivo, fimExclusivo)) {
-                total = total.add(t.getValor());
-            }
-        }
-        return total;
+    // ---- folha de pagamento ----
+
+    public boolean estaNaDataDePagamento(LocalDate data) {
+        return agenda.ehDiaDePagamento(data);
     }
-
-    // ---- operacoes que so fazem sentido para alguns tipos ----
-
-    public void lancarCartao(LocalDate data, BigDecimal horas) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
-    }
-
-    public BigDecimal getHorasNormaisNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
-    }
-
-    public BigDecimal getHorasExtrasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
-    }
-
-    public void lancarVenda(LocalDate data, BigDecimal valor) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
-    }
-
-    public BigDecimal getVendasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
-    }
-
-    public BigDecimal getComissao() {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
-    }
-
-    public void setComissao(BigDecimal comissao) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
-    }
-
-    // ---- agenda e calculo de pagamento ----
-
-    protected LocalDate getDataBase() {
-        return dataBase;
-    }
-
-    protected void setDataBase(LocalDate dataBase) {
-        this.dataBase = dataBase;
-    }
-
-    /** Esta data e um dia em que ESTE empregado deve ser considerado na folha? */
-    public abstract boolean estaNaDataDePagamento(LocalDate data);
 
     /**
-     * Calcula o pagamento pra esta data, sem mudar nada no empregado (usado
-     * tanto por totalFolha, que so quer saber "quanto seria", quanto pelo
-     * rodaFolha de verdade, que so muda algo depois via confirmarPagamento).
-     * Repetir a mesma data devolve o resultado ja calculado antes, em vez de
-     * recalcular sobre um periodo vazio (a dataBase ja teria avancado).
+     * Calcula o pagamento desta data sem mudar nada no empregado: totalFolha
+     * so quer saber quanto seria, e o rodaFolha confirma depois. Repetir a
+     * data de um pagamento ja confirmado devolve o mesmo resultado.
      */
     public final Pagamento calcularPagamento(LocalDate data) {
         if (data.equals(ultimaDataProcessada)) {
             return ultimoPagamentoCalculado;
         }
-        return calcularPagamentoNovo(data);
+        SalarioBruto bruto = contratadoAte(data) ? calcularBruto(periodoPagoEm(data)) : SalarioBruto.nenhum();
+        return descontar(bruto, data);
     }
 
-    protected abstract Pagamento calcularPagamentoNovo(LocalDate data);
+    /** Quanto o empregado ganhou no periodo (as regras de cada tipo). */
+    protected abstract SalarioBruto calcularBruto(Periodo periodo);
 
-    /** So o rodaFolha de verdade chama isto -- avanca a dataBase, exceto quando o pagamento ficou zerado (ver calcularDescontos). */
+    /** O salario fixo que cabe num pagamento, conforme a agenda (mensal inteiro, ou salario*12*N/52). */
+    protected BigDecimal parcelaDoSalarioFixo() {
+        return Dinheiro.truncar(agenda.parcelaDoSalarioMensal(salario));
+    }
+
+    /** So o rodaFolha de verdade chama isto. */
     public void confirmarPagamento(Pagamento pagamento, LocalDate data) {
-        if (pagamento.avancaPeriodo()) {
-            dataBase = data;
+        if (sindicato != null) {
+            sindicato.registrarDivida(pagamento.dividaSindicalRestante());
+        }
+        if (contratadoAte(data)) {
+            ultimoDiaPago = data;
         }
         ultimaDataProcessada = data;
         ultimoPagamentoCalculado = pagamento;
     }
 
-    /**
-     * Desconto sindical devido no periodo (dataBase, data], sem deixar o
-     * contracheque negativo (Obs. 1 da US7 -- so vale pra horista, mas
-     * aplicar geral nao muda nada nos outros tipos). Quando corta, devolve
-     * avancaPeriodo=false: a dataBase fica parada, e o que faltou pagar
-     * se acumula sozinho, porque o proximo calculo conta os dias desde ali.
-     */
-    protected ResultadoDesconto calcularDescontos(LocalDate data, BigDecimal salarioBruto) {
-        BigDecimal descontosDevidos = calcularDescontosDevidos(data);
-        if (descontosDevidos.compareTo(salarioBruto) > 0) {
-            return new ResultadoDesconto(salarioBruto, BigDecimal.ZERO, false);
-        }
-        return new ResultadoDesconto(descontosDevidos, salarioBruto.subtract(descontosDevidos), true);
+    private boolean contratadoAte(LocalDate data) {
+        return dataContratacao != null && !dataContratacao.isAfter(data);
     }
 
-    private BigDecimal calcularDescontosDevidos(LocalDate data) {
-        if (!sindicalizado) {
+    /** Do dia seguinte ao pagamento anterior (pela agenda) ate a data, inclusive; nunca antes da contratacao. */
+    private Periodo periodoPagoEm(LocalDate data) {
+        LocalDate inicio = agenda.inicioDoPeriodo(data);
+        if (inicio.isBefore(dataContratacao)) {
+            inicio = dataContratacao;
+        }
+        return new Periodo(inicio, data.plusDays(1));
+    }
+
+    /** O contracheque nunca fica negativo: o que nao couber vira divida para o proximo (Obs. 1 da US7). */
+    private Pagamento descontar(SalarioBruto bruto, LocalDate data) {
+        BigDecimal devido = descontosDevidosAte(data);
+        BigDecimal aplicado = devido.min(bruto.valor());
+        return new Pagamento(nome, getTipo(), bruto, aplicado, bruto.valor().subtract(aplicado),
+                metodoPagamento.getDescricao(endereco), devido.subtract(aplicado));
+    }
+
+    /** Divida anterior + taxa sindical diaria desde o ultimo pagamento + taxas de servico do periodo. */
+    private BigDecimal descontosDevidosAte(LocalDate data) {
+        if (sindicato == null) {
             return BigDecimal.ZERO;
         }
-        LocalDate inicioPeriodo = dataBase.plusDays(1);
-        long dias = Datas.diasEntre(dataBase, data);
-        BigDecimal totalSindical = taxaSindical.multiply(BigDecimal.valueOf(dias));
-        BigDecimal totalServicos = getTaxasServicoNoPeriodo(inicioPeriodo, data);
-        return totalSindical.add(totalServicos);
-    }
-
-    protected record ResultadoDesconto(BigDecimal aplicados, BigDecimal liquido, boolean avancaPeriodo) {
+        BigDecimal devido = sindicato.getDivida();
+        if (!contratadoAte(data) || !data.isAfter(ultimoDiaPago)) {
+            return devido;
+        }
+        BigDecimal dias = BigDecimal.valueOf(Datas.diasEntre(ultimoDiaPago, data));
+        Periodo periodo = new Periodo(ultimoDiaPago.plusDays(1), data.plusDays(1));
+        return devido.add(sindicato.getTaxaSindical().multiply(dias))
+                .add(sindicato.getTaxasServicoNoPeriodo(periodo));
     }
 }
