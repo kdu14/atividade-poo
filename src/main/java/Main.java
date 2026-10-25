@@ -1,10 +1,12 @@
 import easyaccept.EasyAccept;
 
+import java.io.File;
+
 /**
- * Roda os testes de aceitacao do Milestone 1 (User Stories 1 a 8) usando o
- * EasyAccept. Cada chamada abaixo cria uma nova Facade (como se fosse um
- * processo Java separado) -- e assim que a persistencia em disco entre um
- * script e o seu par de continuacao "_1" e realmente testada.
+ * Roda os testes de aceitacao (User Stories 1 a 10) usando o EasyAccept.
+ * Cada chamada abaixo cria uma nova Facade (como se fosse um processo Java
+ * separado) -- e assim que a persistencia em disco entre um script e o seu
+ * par de continuacao "_1" e realmente testada.
  */
 public class Main {
     public static void main(String[] args) {
@@ -24,8 +26,16 @@ public class Main {
                 "tests/us6.txt",
                 "tests/us6_1.txt",
                 "tests/us7.txt",
-                "tests/us8.txt"
+                "tests/us8.txt",
+                "tests/us9.txt",
+                "tests/us9_1.txt",
+                "tests/us10.txt",
+                "tests/us10_1.txt"
         };
+
+        // comeca de um estado limpo: um wepayu.dat que sobrou de uma execucao
+        // anterior faria o primeiro script ler dados que ele nao criou.
+        new File("wepayu.dat").delete();
 
         // "quit", no fim de cada script, encerra a chamada inteira ao EasyAccept
         // -- por isso cada arquivo precisa da sua PROPRIA chamada a main().
