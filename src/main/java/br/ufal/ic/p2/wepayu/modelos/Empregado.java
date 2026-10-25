@@ -1,5 +1,7 @@
 package br.ufal.ic.p2.wepayu.modelos;
 
+import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhComissionadoException;
+import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoEhHoristaException;
 import br.ufal.ic.p2.wepayu.util.Datas;
 
 import java.io.Serializable;
@@ -16,6 +18,8 @@ import java.util.List;
  * precisa checar o tipo do empregado antes de chamar o metodo.
  */
 public abstract class Empregado implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String id;
     private String nome;
@@ -129,32 +133,32 @@ public abstract class Empregado implements Serializable {
 
     // ---- operacoes que so fazem sentido para alguns tipos ----
 
-    public void lancarCartao(LocalDate data, BigDecimal horas) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
+    public void lancarCartao(LocalDate data, BigDecimal horas) throws EmpregadoNaoEhHoristaException {
+        throw new EmpregadoNaoEhHoristaException();
     }
 
-    public BigDecimal getHorasNormaisNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
+    public BigDecimal getHorasNormaisNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhHoristaException {
+        throw new EmpregadoNaoEhHoristaException();
     }
 
-    public BigDecimal getHorasExtrasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh horista.");
+    public BigDecimal getHorasExtrasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhHoristaException {
+        throw new EmpregadoNaoEhHoristaException();
     }
 
-    public void lancarVenda(LocalDate data, BigDecimal valor) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
+    public void lancarVenda(LocalDate data, BigDecimal valor) throws EmpregadoNaoEhComissionadoException {
+        throw new EmpregadoNaoEhComissionadoException();
     }
 
-    public BigDecimal getVendasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
+    public BigDecimal getVendasNoPeriodo(LocalDate inicioInclusivo, LocalDate fimExclusivo) throws EmpregadoNaoEhComissionadoException {
+        throw new EmpregadoNaoEhComissionadoException();
     }
 
-    public BigDecimal getComissao() {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
+    public BigDecimal getComissao() throws EmpregadoNaoEhComissionadoException {
+        throw new EmpregadoNaoEhComissionadoException();
     }
 
-    public void setComissao(BigDecimal comissao) {
-        throw new UnsupportedOperationException("Empregado nao eh comissionado.");
+    public void setComissao(BigDecimal comissao) throws EmpregadoNaoEhComissionadoException {
+        throw new EmpregadoNaoEhComissionadoException();
     }
 
     // ---- agenda e calculo de pagamento ----

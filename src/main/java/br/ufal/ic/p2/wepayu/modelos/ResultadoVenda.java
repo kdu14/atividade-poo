@@ -6,6 +6,8 @@ import java.time.LocalDate;
 
 public class ResultadoVenda implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private final LocalDate data;
     private final BigDecimal valor;
 

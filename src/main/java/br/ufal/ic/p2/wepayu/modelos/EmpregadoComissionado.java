@@ -10,6 +10,8 @@ import java.util.List;
 
 public class EmpregadoComissionado extends Empregado {
 
+    private static final long serialVersionUID = 1L;
+
     // primeiro pagamento: sexta da 2a semana apos a contratacao (1/1/2005,
     // que cai num sabado) -- ou seja, 14/1; dai em diante, a cada 14 dias.
     private static final LocalDate PRIMEIRO_PAGAMENTO = LocalDate.of(2005, 1, 14);

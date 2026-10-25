@@ -2,6 +2,8 @@ package br.ufal.ic.p2.wepayu.modelos;
 
 public class EmBanco extends MetodoPagamento {
 
+    private static final long serialVersionUID = 1L;
+
     private final String banco;
     private final String agencia;
     private final String contaCorrente;

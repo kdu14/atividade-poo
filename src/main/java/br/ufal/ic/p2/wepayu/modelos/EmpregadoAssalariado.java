@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 public class EmpregadoAssalariado extends Empregado {
 
+    private static final long serialVersionUID = 1L;
+
     // O enunciado (US7) pede pra considerar todo assalariado/comissionado
     // contratado em 1/1/2005, ja que criarEmpregado ainda nao tem esse campo.
     static final LocalDate DATA_CONTRATACAO_PADRAO = LocalDate.of(2005, 1, 1);

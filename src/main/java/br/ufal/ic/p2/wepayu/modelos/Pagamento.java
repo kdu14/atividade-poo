@@ -23,4 +23,6 @@ public record Pagamento(
         String metodoDescricao,
         boolean avancaPeriodo
 ) implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 }

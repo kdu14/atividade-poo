@@ -1,6 +1,6 @@
 package br.ufal.ic.p2.wepayu;
 
-import br.ufal.ic.p2.wepayu.excecoes.EmpregadoException;
+import br.ufal.ic.p2.wepayu.excecoes.*;
 import br.ufal.ic.p2.wepayu.modelos.*;
 import br.ufal.ic.p2.wepayu.util.Datas;
 import br.ufal.ic.p2.wepayu.util.Dinheiro;
@@ -45,7 +45,7 @@ public class Sistema {
 
     // ==================== ciclo de vida ====================
 
-    public void zerarSistema() throws EmpregadoException {
+    public void zerarSistema() throws WePayUException {
         verificarNaoEncerrado();
         executarComMemento(() -> {
             empregados = new LinkedHashMap<>();
@@ -55,26 +55,26 @@ public class Sistema {
         });
     }
 
-    public void encerrarSistema() throws EmpregadoException {
+    public void encerrarSistema() throws WePayUException {
         verificarNaoEncerrado();
         salvarNoDisco();
         encerrado = true;
     }
 
-    public void undo() throws EmpregadoException {
+    public void undo() throws WePayUException {
         verificarNaoEncerrado();
         if (pilhaUndo.isEmpty()) {
-            throw new EmpregadoException("Nao ha comando a desfazer.");
+            throw new SemComandoParaDesfazerException();
         }
         byte[] fotoAtual = tirarFoto();
         restaurarFoto(pilhaUndo.pop());
         pilhaRedo.push(fotoAtual);
     }
 
-    public void redo() throws EmpregadoException {
+    public void redo() throws WePayUException {
         verificarNaoEncerrado();
         if (pilhaRedo.isEmpty()) {
-            throw new EmpregadoException("Nao ha comando a refazer.");
+            throw new SemComandoParaRefazerException();
         }
         byte[] fotoAtual = tirarFoto();
         restaurarFoto(pilhaRedo.pop());
@@ -83,24 +83,24 @@ public class Sistema {
 
     // ==================== empregados ====================
 
-    public String criarEmpregado(String nome, String endereco, String tipo, String salarioTexto) throws EmpregadoException {
+    public String criarEmpregado(String nome, String endereco, String tipo, String salarioTexto) throws WePayUException {
         verificarNaoEncerrado();
         return executarComMemento(() -> criarEmpregadoInterno(nome, endereco, tipo, salarioTexto, null));
     }
 
-    public String criarEmpregado(String nome, String endereco, String tipo, String salarioTexto, String comissaoTexto) throws EmpregadoException {
+    public String criarEmpregado(String nome, String endereco, String tipo, String salarioTexto, String comissaoTexto) throws WePayUException {
         verificarNaoEncerrado();
         return executarComMemento(() -> criarEmpregadoInterno(nome, endereco, tipo, salarioTexto, comissaoTexto));
     }
 
-    private String criarEmpregadoInterno(String nome, String endereco, String tipo, String salarioTexto, String comissaoTexto) throws EmpregadoException {
+    private String criarEmpregadoInterno(String nome, String endereco, String tipo, String salarioTexto, String comissaoTexto) throws WePayUException {
         validarNaoVazio(nome, "Nome nao pode ser nulo.");
         validarNaoVazio(endereco, "Endereco nao pode ser nulo.");
         validarTipoConhecido(tipo);
 
         boolean tipoExigeComissao = "comissionado".equals(tipo);
         if (tipoExigeComissao != (comissaoTexto != null)) {
-            throw new EmpregadoException("Tipo nao aplicavel.");
+            throw new TipoNaoAplicavelException();
         }
 
         BigDecimal salario = validarSalario(salarioTexto);
@@ -120,7 +120,7 @@ public class Sistema {
         return id;
     }
 
-    public void removerEmpregado(String emp) throws EmpregadoException {
+    public void removerEmpregado(String emp) throws WePayUException {
         verificarNaoEncerrado();
         validarIdentificacaoNaoVazia(emp);
         buscarEmpregado(emp);
@@ -133,12 +133,12 @@ public class Sistema {
         });
     }
 
-    public int getNumeroDeEmpregados() throws EmpregadoException {
+    public int getNumeroDeEmpregados() throws WePayUException {
         verificarNaoEncerrado();
         return empregados.size();
     }
 
-    public String getEmpregadoPorNome(String nome, String indiceTexto) throws EmpregadoException {
+    public String getEmpregadoPorNome(String nome, String indiceTexto) throws WePayUException {
         verificarNaoEncerrado();
         int indice = Integer.parseInt(indiceTexto.trim());
         int encontrados = 0;
@@ -150,10 +150,10 @@ public class Sistema {
                 }
             }
         }
-        throw new EmpregadoException("Nao ha empregado com esse nome.");
+        throw new EmpregadoNaoEncontradoPorNomeException();
     }
 
-    public String getAtributoEmpregado(String emp, String atributo) throws EmpregadoException {
+    public String getAtributoEmpregado(String emp, String atributo) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         return switch (atributo) {
@@ -161,7 +161,7 @@ public class Sistema {
             case "endereco" -> e.getEndereco();
             case "tipo" -> e.getTipo();
             case "salario" -> Dinheiro.formatar(e.getSalario());
-            case "comissao" -> Dinheiro.formatar(chamarPolimorfico(e::getComissao));
+            case "comissao" -> Dinheiro.formatar(e.getComissao());
             case "sindicalizado" -> e.isSindicalizado() ? "true" : "false";
             case "idSindicato" -> {
                 exigirSindicalizado(e);
@@ -184,13 +184,13 @@ public class Sistema {
                 exigirRecebeEmBanco(e);
                 yield e.getMetodoPagamento().getContaCorrente();
             }
-            default -> throw new EmpregadoException("Atributo nao existe.");
+            default -> throw new AtributoInexistenteException();
         };
     }
 
     // ==================== alteracao de empregado ====================
 
-    public void alteraEmpregado(String emp, String atributo, String valor) throws EmpregadoException {
+    public void alteraEmpregado(String emp, String atributo, String valor) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         executarComMemento(() -> {
@@ -199,11 +199,11 @@ public class Sistema {
         });
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor, String extra) throws EmpregadoException {
+    public void alteraEmpregado(String emp, String atributo, String valor, String extra) throws WePayUException {
         verificarNaoEncerrado();
         buscarEmpregado(emp);
         if (!"tipo".equals(atributo)) {
-            throw new EmpregadoException("Atributo nao existe.");
+            throw new AtributoInexistenteException();
         }
         executarComMemento(() -> {
             mudarTipo(emp, valor, extra);
@@ -211,11 +211,11 @@ public class Sistema {
         });
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor, String idSindicato, String taxaSindicalTexto) throws EmpregadoException {
+    public void alteraEmpregado(String emp, String atributo, String valor, String idSindicato, String taxaSindicalTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         if (!"sindicalizado".equals(atributo)) {
-            throw new EmpregadoException("Atributo nao existe.");
+            throw new AtributoInexistenteException();
         }
         executarComMemento(() -> {
             sindicalizarEmpregado(emp, e, idSindicato, taxaSindicalTexto);
@@ -223,11 +223,11 @@ public class Sistema {
         });
     }
 
-    public void alteraEmpregado(String emp, String atributo, String valor1, String banco, String agencia, String contaCorrente) throws EmpregadoException {
+    public void alteraEmpregado(String emp, String atributo, String valor1, String banco, String agencia, String contaCorrente) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         if (!"metodoPagamento".equals(atributo)) {
-            throw new EmpregadoException("Atributo nao existe.");
+            throw new AtributoInexistenteException();
         }
         executarComMemento(() -> {
             validarNaoVazio(banco, "Banco nao pode ser nulo.");
@@ -238,7 +238,7 @@ public class Sistema {
         });
     }
 
-    private void alterarAtributoSimples(Empregado e, String atributo, String valor) throws EmpregadoException {
+    private void alterarAtributoSimples(Empregado e, String atributo, String valor) throws WePayUException {
         switch (atributo) {
             case "nome" -> {
                 validarNaoVazio(valor, "Nome nao pode ser nulo.");
@@ -259,9 +259,9 @@ public class Sistema {
                     removerDoIndiceSindicato(e);
                     e.dessindicalizar();
                 } else if (!"true".equals(valor)) {
-                    throw new EmpregadoException("Valor deve ser true ou false.");
+                    throw new ValorInvalidoException("Valor deve ser true ou false.");
                 } else {
-                    throw new EmpregadoException("Identificacao do sindicato nao pode ser nula.");
+                    throw new CampoObrigatorioException("Identificacao do sindicato nao pode ser nula.");
                 }
             }
             case "metodoPagamento" -> {
@@ -270,24 +270,24 @@ public class Sistema {
                 } else if ("emMaos".equals(valor)) {
                     e.setMetodoPagamento(new EmMaos());
                 } else {
-                    throw new EmpregadoException("Metodo de pagamento invalido.");
+                    throw new MetodoPagamentoInvalidoException();
                 }
             }
-            default -> throw new EmpregadoException("Atributo nao existe.");
+            default -> throw new AtributoInexistenteException();
         }
     }
 
     // troca o tipo preservando nome/endereco/metodo/sindicato; "extra" e
     // opcional pra horista/assalariado (mantem o salario de antes se nao vier),
     // mas obrigatorio pra comissionado, que nunca teria uma comissao previa.
-    private void mudarTipo(String id, String tipo, String extra) throws EmpregadoException {
+    private void mudarTipo(String id, String tipo, String extra) throws WePayUException {
         validarTipoConhecido(tipo);
         Empregado antigo = empregados.get(id);
 
         Empregado novo;
         if ("comissionado".equals(tipo)) {
             if (extra == null) {
-                throw new EmpregadoException("Tipo nao aplicavel.");
+                throw new TipoNaoAplicavelException();
             }
             BigDecimal comissao = validarComissao(extra);
             novo = new EmpregadoComissionado(id, antigo.getNome(), antigo.getEndereco(), antigo.getSalario(), comissao);
@@ -305,7 +305,7 @@ public class Sistema {
         empregados.put(id, novo);
     }
 
-    private void sindicalizarEmpregado(String id, Empregado e, String idSindicato, String taxaSindicalTexto) throws EmpregadoException {
+    private void sindicalizarEmpregado(String id, Empregado e, String idSindicato, String taxaSindicalTexto) throws WePayUException {
         validarNaoVazio(idSindicato, "Identificacao do sindicato nao pode ser nula.");
         BigDecimal taxaSindical = validarValorNaoNegativo(taxaSindicalTexto,
                 "Taxa sindical nao pode ser nula.",
@@ -314,7 +314,7 @@ public class Sistema {
 
         String donoAtual = indiceSindicato.get(idSindicato);
         if (donoAtual != null && !donoAtual.equals(id)) {
-            throw new EmpregadoException("Ha outro empregado com esta identificacao de sindicato");
+            throw new IdSindicatoDuplicadoException();
         }
 
         removerDoIndiceSindicato(e);
@@ -330,42 +330,34 @@ public class Sistema {
 
     // ==================== lancamentos ====================
 
-    public void lancaCartao(String emp, String dataTexto, String horasTexto) throws EmpregadoException {
+    public void lancaCartao(String emp, String dataTexto, String horasTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         LocalDate data = validarData(dataTexto, "Data invalida.");
         BigDecimal horas = validarValorPositivo(horasTexto, "Horas devem ser positivas.");
         executarComMemento(() -> {
-            try {
-                e.lancarCartao(data, horas);
-            } catch (UnsupportedOperationException ex) {
-                throw new EmpregadoException(ex.getMessage());
-            }
+            e.lancarCartao(data, horas);
             return null;
         });
     }
 
-    public void lancaVenda(String emp, String dataTexto, String valorTexto) throws EmpregadoException {
+    public void lancaVenda(String emp, String dataTexto, String valorTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         LocalDate data = validarData(dataTexto, "Data invalida.");
         BigDecimal valor = validarValorPositivo(valorTexto, "Valor deve ser positivo.");
         executarComMemento(() -> {
-            try {
-                e.lancarVenda(data, valor);
-            } catch (UnsupportedOperationException ex) {
-                throw new EmpregadoException(ex.getMessage());
-            }
+            e.lancarVenda(data, valor);
             return null;
         });
     }
 
-    public void lancaTaxaServico(String membro, String dataTexto, String valorTexto) throws EmpregadoException {
+    public void lancaTaxaServico(String membro, String dataTexto, String valorTexto) throws WePayUException {
         verificarNaoEncerrado();
         validarNaoVazio(membro, "Identificacao do membro nao pode ser nula.");
         String idEmpregado = indiceSindicato.get(membro);
         if (idEmpregado == null) {
-            throw new EmpregadoException("Membro nao existe.");
+            throw new MembroNaoExisteException();
         }
         LocalDate data = validarData(dataTexto, "Data invalida.");
         BigDecimal valor = validarValorPositivo(valorTexto, "Valor deve ser positivo.");
@@ -377,31 +369,31 @@ public class Sistema {
 
     // ==================== consultas por periodo ====================
 
-    public String getHorasNormaisTrabalhadas(String emp, String dataInicialTexto, String dataFinalTexto) throws EmpregadoException {
+    public String getHorasNormaisTrabalhadas(String emp, String dataInicialTexto, String dataFinalTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         LocalDate[] intervalo = validarIntervalo(dataInicialTexto, dataFinalTexto);
-        BigDecimal horas = chamarPolimorfico(() -> e.getHorasNormaisNoPeriodo(intervalo[0], intervalo[1]));
+        BigDecimal horas = e.getHorasNormaisNoPeriodo(intervalo[0], intervalo[1]);
         return Formatador.formatarHoras(horas);
     }
 
-    public String getHorasExtrasTrabalhadas(String emp, String dataInicialTexto, String dataFinalTexto) throws EmpregadoException {
+    public String getHorasExtrasTrabalhadas(String emp, String dataInicialTexto, String dataFinalTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         LocalDate[] intervalo = validarIntervalo(dataInicialTexto, dataFinalTexto);
-        BigDecimal horas = chamarPolimorfico(() -> e.getHorasExtrasNoPeriodo(intervalo[0], intervalo[1]));
+        BigDecimal horas = e.getHorasExtrasNoPeriodo(intervalo[0], intervalo[1]);
         return Formatador.formatarHoras(horas);
     }
 
-    public String getVendasRealizadas(String emp, String dataInicialTexto, String dataFinalTexto) throws EmpregadoException {
+    public String getVendasRealizadas(String emp, String dataInicialTexto, String dataFinalTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         LocalDate[] intervalo = validarIntervalo(dataInicialTexto, dataFinalTexto);
-        BigDecimal vendas = chamarPolimorfico(() -> e.getVendasNoPeriodo(intervalo[0], intervalo[1]));
+        BigDecimal vendas = e.getVendasNoPeriodo(intervalo[0], intervalo[1]);
         return Dinheiro.formatar(vendas);
     }
 
-    public String getTaxasServico(String emp, String dataInicialTexto, String dataFinalTexto) throws EmpregadoException {
+    public String getTaxasServico(String emp, String dataInicialTexto, String dataFinalTexto) throws WePayUException {
         verificarNaoEncerrado();
         Empregado e = buscarEmpregado(emp);
         exigirSindicalizado(e);
@@ -412,7 +404,7 @@ public class Sistema {
 
     // ==================== folha de pagamento ====================
 
-    public String totalFolha(String dataTexto) throws EmpregadoException {
+    public String totalFolha(String dataTexto) throws WePayUException {
         verificarNaoEncerrado();
         LocalDate data = validarData(dataTexto, "Data invalida.");
         BigDecimal total = BigDecimal.ZERO;
@@ -424,7 +416,7 @@ public class Sistema {
         return Dinheiro.formatar(total);
     }
 
-    public void rodaFolha(String dataTexto, String arquivoSaida) throws EmpregadoException {
+    public void rodaFolha(String dataTexto, String arquivoSaida) throws WePayUException {
         verificarNaoEncerrado();
         LocalDate data = validarData(dataTexto, "Data invalida.");
         executarComMemento(() -> {
@@ -452,75 +444,75 @@ public class Sistema {
         });
     }
 
-    private void escreverArquivo(String caminho, String conteudo) throws EmpregadoException {
+    private void escreverArquivo(String caminho, String conteudo) throws WePayUException {
         try (Writer w = new OutputStreamWriter(new FileOutputStream(caminho), StandardCharsets.UTF_8)) {
             w.write(conteudo);
         } catch (IOException ex) {
-            throw new EmpregadoException("Nao foi possivel escrever o arquivo de saida: " + ex.getMessage());
+            throw new ArquivoException("Nao foi possivel escrever o arquivo de saida: " + ex.getMessage());
         }
     }
 
     // ==================== validacoes compartilhadas ====================
 
-    private void verificarNaoEncerrado() throws EmpregadoException {
+    private void verificarNaoEncerrado() throws WePayUException {
         if (encerrado) {
-            throw new EmpregadoException("Nao pode dar comandos depois de encerrarSistema.");
+            throw new SistemaEncerradoException();
         }
     }
 
-    private void validarIdentificacaoNaoVazia(String emp) throws EmpregadoException {
+    private void validarIdentificacaoNaoVazia(String emp) throws WePayUException {
         if (emp == null || emp.isEmpty()) {
-            throw new EmpregadoException("Identificacao do empregado nao pode ser nula.");
+            throw new CampoObrigatorioException("Identificacao do empregado nao pode ser nula.");
         }
     }
 
-    private Empregado buscarEmpregado(String emp) throws EmpregadoException {
+    private Empregado buscarEmpregado(String emp) throws WePayUException {
         validarIdentificacaoNaoVazia(emp);
         Empregado e = empregados.get(emp);
         if (e == null) {
-            throw new EmpregadoException("Empregado nao existe.");
+            throw new EmpregadoNaoExisteException();
         }
         return e;
     }
 
-    private void exigirSindicalizado(Empregado e) throws EmpregadoException {
+    private void exigirSindicalizado(Empregado e) throws WePayUException {
         if (!e.isSindicalizado()) {
-            throw new EmpregadoException("Empregado nao eh sindicalizado.");
+            throw new EmpregadoNaoSindicalizadoException();
         }
     }
 
-    private void exigirRecebeEmBanco(Empregado e) throws EmpregadoException {
+    private void exigirRecebeEmBanco(Empregado e) throws WePayUException {
         if (!e.getMetodoPagamento().recebeEmBanco()) {
-            throw new EmpregadoException("Empregado nao recebe em banco.");
+            throw new EmpregadoNaoRecebeEmBancoException();
         }
     }
 
-    private void exigirComissionado(Empregado e) throws EmpregadoException {
+    private void exigirComissionado(Empregado e) throws WePayUException {
         if (!"comissionado".equals(e.getTipo())) {
-            throw new EmpregadoException("Empregado nao eh comissionado.");
+            throw new EmpregadoNaoEhComissionadoException();
         }
     }
 
-    private void validarNaoVazio(String valor, String mensagem) throws EmpregadoException {
+    private void validarNaoVazio(String valor, String mensagem) throws WePayUException {
         if (valor == null || valor.isEmpty()) {
-            throw new EmpregadoException(mensagem);
+            throw new CampoObrigatorioException(mensagem);
         }
     }
 
-    private void validarTipoConhecido(String tipo) throws EmpregadoException {
+    private void validarTipoConhecido(String tipo) throws WePayUException {
         if (!"horista".equals(tipo) && !"assalariado".equals(tipo) && !"comissionado".equals(tipo)) {
-            throw new EmpregadoException("Tipo invalido.");
+            throw new TipoInvalidoException();
         }
     }
 
-    private BigDecimal validarSalario(String texto) throws EmpregadoException {
+    private BigDecimal validarSalario(String texto) throws WePayUException {
         return validarValorNaoNegativo(texto,
                 "Salario nao pode ser nulo.",
                 "Salario deve ser numerico.",
                 "Salario deve ser nao-negativo.");
     }
 
-    private BigDecimal validarComissao(String texto) throws EmpregadoException {
+    private BigDecimal validarComissao(String texto) throws WePayUException {
         return validarValorNaoNegativo(texto,
                 "Comissao nao pode ser nula.",
                 "Comissao deve ser numerica.",
@@ -528,70 +520,57 @@ public class Sistema {
     }
 
     private BigDecimal validarValorNaoNegativo(String texto, String mensagemNulo, String mensagemNumerico, String mensagemNegativo)
-            throws EmpregadoException {
+            throws WePayUException {
         if (texto == null || texto.isEmpty()) {
-            throw new EmpregadoException(mensagemNulo);
+            throw new CampoObrigatorioException(mensagemNulo);
         }
         if (!Dinheiro.ehNumerico(texto)) {
-            throw new EmpregadoException(mensagemNumerico);
+            throw new ValorInvalidoException(mensagemNumerico);
         }
         BigDecimal valor = Dinheiro.parse(texto);
         if (valor.compareTo(BigDecimal.ZERO) < 0) {
-            throw new EmpregadoException(mensagemNegativo);
+            throw new ValorInvalidoException(mensagemNegativo);
         }
         return valor;
     }
 
-    private BigDecimal validarValorPositivo(String texto, String mensagemErro) throws EmpregadoException {
+    private BigDecimal validarValorPositivo(String texto, String mensagemErro) throws WePayUException {
         BigDecimal valor;
         if (texto == null || !Dinheiro.ehNumerico(texto)) {
-            throw new EmpregadoException(mensagemErro);
+            throw new ValorInvalidoException(mensagemErro);
         }
         valor = Dinheiro.parse(texto);
         if (valor.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new EmpregadoException(mensagemErro);
+            throw new ValorInvalidoException(mensagemErro);
         }
         return valor;
     }
 
-    private LocalDate validarData(String texto, String mensagemErro) throws EmpregadoException {
+    private LocalDate validarData(String texto, String mensagemErro) throws WePayUException {
         try {
             return Datas.parse(texto);
         } catch (IllegalArgumentException e) {
-            throw new EmpregadoException(mensagemErro);
+            throw new DataInvalidaException(mensagemErro);
         }
     }
 
-    private LocalDate[] validarIntervalo(String inicioTexto, String fimTexto) throws EmpregadoException {
+    private LocalDate[] validarIntervalo(String inicioTexto, String fimTexto) throws WePayUException {
         LocalDate inicio = validarData(inicioTexto, "Data inicial invalida.");
         LocalDate fim = validarData(fimTexto, "Data final invalida.");
         if (inicio.isAfter(fim)) {
-            throw new EmpregadoException("Data inicial nao pode ser posterior aa data final.");
+            throw new IntervaloDeDatasInvalidoException();
         }
         return new LocalDate[]{inicio, fim};
-    }
-
-    /** Traduz UnsupportedOperationException (lancada pelos metodos "default" de Empregado) em EmpregadoException. */
-    private interface ChamadaPolimorfica {
-        BigDecimal chamar();
-    }
-
-    private BigDecimal chamarPolimorfico(ChamadaPolimorfica chamada) throws EmpregadoException {
-        try {
-            return chamada.chamar();
-        } catch (UnsupportedOperationException e) {
-            throw new EmpregadoException(e.getMessage());
-        }
     }
 
     // ==================== undo/redo (memento) ====================
 
     @FunctionalInterface
     private interface Mutacao<T> {
-        T executar() throws EmpregadoException;
+        T executar() throws WePayUException;
     }
 
-    private <T> T executarComMemento(Mutacao<T> mutacao) throws EmpregadoException {
+    private <T> T executarComMemento(Mutacao<T> mutacao) throws WePayUException {
         byte[] foto = tirarFoto();
         T resultado = mutacao.executar();
         pilhaUndo.push(foto);
@@ -644,13 +623,13 @@ public class Sistema {
         }
     }
 
-    private void salvarNoDisco() throws EmpregadoException {
+    private void salvarNoDisco() throws WePayUException {
         try (ObjectOutputStream saida = new ObjectOutputStream(new FileOutputStream(ARQUIVO_PERSISTENCIA))) {
             saida.writeObject(empregados);
             saida.writeObject(indiceSindicato);
             saida.writeInt(proximoId);
         } catch (IOException e) {
-            throw new EmpregadoException("Nao foi possivel gravar a persistencia: " + e.getMessage());
+            throw new ArquivoException("Nao foi possivel gravar a persistencia: " + e.getMessage());
         }
     }
 }

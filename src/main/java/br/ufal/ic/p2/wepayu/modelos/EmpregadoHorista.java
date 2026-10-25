@@ -10,6 +10,8 @@ import java.util.List;
 
 public class EmpregadoHorista extends Empregado {
 
+    private static final long serialVersionUID = 1L;
+
     private static final BigDecimal OITO_HORAS = BigDecimal.valueOf(8);
     private static final BigDecimal FATOR_HORA_EXTRA = new BigDecimal("1.5");
 
